@@ -2863,6 +2863,33 @@ Process.prototype.reportFrameCount = function () {
     return this.frameCount;
 };
 
+Process.prototype.toneTest = function(note, time) {
+  console.log('in Process.toneTest function');
+  var osc;
+  if (!osc) {
+   osc = new Tone.Oscillator('c3');
+  }
+
+  var env;
+  if (!env) {
+    env  = new Tone.AmplitudeEnvelope();
+  }
+
+  osc.connect(env);
+  env.toMaster();
+
+  if (osc.state === 'stopped') {
+    osc.start();
+  }
+
+  osc.frequency.value = note;
+  env.triggerAttackRelease(time);
+
+  // osc.stop();
+  // env.dispose();
+  // osc.dispose();
+};
+
 // Context /////////////////////////////////////////////////////////////
 
 /*

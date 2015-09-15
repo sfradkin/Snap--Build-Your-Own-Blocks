@@ -164,7 +164,8 @@ SpriteMorph.prototype.categories =
         'pen',
         'variables',
         'lists',
-        'other'
+        'other',
+        'tone'
     ];
 
 SpriteMorph.prototype.blockColor = {
@@ -177,7 +178,8 @@ SpriteMorph.prototype.blockColor = {
     operators : new Color(98, 194, 19),
     variables : new Color(243, 118, 29),
     lists : new Color(217, 77, 17),
-    other: new Color(150, 150, 150)
+    other: new Color(150, 150, 150),
+    tone: new Color(212, 98, 255)
 };
 
 SpriteMorph.prototype.paletteColor = new Color(55, 55, 55);
@@ -201,6 +203,14 @@ SpriteMorph.prototype.bubbleMaxTextWidth = 130;
 
 SpriteMorph.prototype.initBlocks = function () {
     SpriteMorph.prototype.blocks = {
+
+        toneTest: {
+          only: SpriteMorph,
+          type: 'command',
+          category: 'tone',
+          spec: 'oscillate note %s for time %s',
+          defaults: ['c3', '4n']
+        },
 
         // Motion
         forward: {
@@ -583,7 +593,7 @@ SpriteMorph.prototype.initBlocks = function () {
         },
 
     /* migrated to a newer block version:
-  
+
         receiveClick: {
             type: 'hat',
             category: 'control',
@@ -1738,8 +1748,9 @@ SpriteMorph.prototype.blockTemplates = function (category) {
             }
         }
     }
-
-    if (cat === 'motion') {
+    if (cat === 'tone') {
+      blocks.push(block('toneTest'));
+    } else if (cat === 'motion') {
 
         blocks.push(block('forward'));
         blocks.push(block('turn'));
