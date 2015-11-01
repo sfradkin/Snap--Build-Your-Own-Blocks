@@ -212,6 +212,19 @@ SpriteMorph.prototype.initBlocks = function () {
           defaults: ['c3', '4n']
         },
 
+        tonePlay: {
+          only: SpriteMorph,
+          type: 'command',
+          category: 'tone',
+          spec: 'play all notes defined'
+        },
+
+        toneSimpleSynth: {
+          type: 'command',
+          category: 'tone',
+          spec: 'define notes to play in synth %c'
+        },
+
         // Motion
         forward: {
             only: SpriteMorph,
@@ -1750,6 +1763,8 @@ SpriteMorph.prototype.blockTemplates = function (category) {
     }
     if (cat === 'tone') {
       blocks.push(block('toneTest'));
+      blocks.push(block('tonePlay'));
+      blocks.push(block('toneSimpleSynth'));
     } else if (cat === 'motion') {
 
         blocks.push(block('forward'));

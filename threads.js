@@ -1409,6 +1409,7 @@ Process.prototype.reportListContainsItem = function (list, element) {
 // Process conditionals primitives
 
 Process.prototype.doIf = function () {
+  console.log("in doIf");
     var args = this.context.inputs,
         outer = this.context.outerContext, // for tail call elimination
         isCustomBlock = this.context.isCustomBlock;
@@ -2793,6 +2794,7 @@ Process.prototype.doSetTempo = function (bpm) {
 };
 
 Process.prototype.doPlayNote = function (pitch, beats) {
+  console.log("in doPlayNote");
     var tempo = this.reportTempo();
     this.doPlayNoteForSecs(
         parseFloat(pitch || '0'),
@@ -2863,32 +2865,7 @@ Process.prototype.reportFrameCount = function () {
     return this.frameCount;
 };
 
-Process.prototype.toneTest = function(note, time) {
-  console.log('in Process.toneTest function');
-  var osc;
-  if (!osc) {
-   osc = new Tone.Oscillator('c3');
-  }
 
-  var env;
-  if (!env) {
-    env  = new Tone.AmplitudeEnvelope();
-  }
-
-  osc.connect(env);
-  env.toMaster();
-
-  if (osc.state === 'stopped') {
-    osc.start();
-  }
-
-  osc.frequency.value = note;
-  env.triggerAttackRelease(time);
-
-  // osc.stop();
-  // env.dispose();
-  // osc.dispose();
-};
 
 // Context /////////////////////////////////////////////////////////////
 
