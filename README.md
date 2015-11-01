@@ -1,4 +1,13 @@
 
+This is a customized version of Snap! in which I am attempting to provide
+abstractions for using Tone.js inside of Snap! so that users can create
+much more sophisticated sound.
+
+As of 10-31-2015, there are 3 new blocks in the Tone category that will
+let a user define notes within a simple synth and play them.
+
+-----------------------------------
+
 Snap! Build Your Own Blocks
 
 http://snap.berkeley.edu
