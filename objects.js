@@ -212,17 +212,10 @@ SpriteMorph.prototype.initBlocks = function () {
           defaults: ['c3', '4n']
         },
 
-        tonePlay: {
-          only: SpriteMorph,
-          type: 'command',
-          category: 'tone',
-          spec: 'play all notes defined'
-        },
-
         toneSimpleSynth: {
-          type: 'command',
+          type: 'toneblock',
           category: 'tone',
-          spec: 'define notes to play in synth %c'
+          spec: 'play notes in synth %c'
         },
 
         // Motion
@@ -1636,7 +1629,7 @@ SpriteMorph.prototype.blockForSelector = function (selector, setDefaults) {
     migration = this.blockMigrations[selector];
     info = this.blocks[migration ? migration.selector : selector];
     if (!info) {return null; }
-    block = info.type === 'command' ? new CommandBlockMorph()
+    block = info.type === 'toneblock' ? new ToneBlockMorph() : info.type === 'command' ? new CommandBlockMorph()
         : info.type === 'hat' ? new HatBlockMorph()
             : info.type === 'ring' ? new RingMorph()
                 : new ReporterBlockMorph(info.type === 'predicate');
@@ -1763,7 +1756,6 @@ SpriteMorph.prototype.blockTemplates = function (category) {
     }
     if (cat === 'tone') {
       blocks.push(block('toneTest'));
-      blocks.push(block('tonePlay'));
       blocks.push(block('toneSimpleSynth'));
     } else if (cat === 'motion') {
 

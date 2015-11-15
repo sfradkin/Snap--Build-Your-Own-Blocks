@@ -139,7 +139,11 @@ ThreadManager.prototype.toggleProcess = function (block) {
     if (active) {
         active.stop();
     } else {
-        return this.startProcess(block);
+        if (block.isTone()) {
+          return this.startProcess(block, false, false, createAndPlaySynth);
+        } else {
+          return this.startProcess(block);
+        }
     }
 };
 
@@ -247,7 +251,7 @@ ThreadManager.prototype.removeTerminatedProcesses = function () {
                 }
             }
 
-            if (proc.topBlock instanceof ReporterBlockMorph) {
+            if (proc.topBlock instanceof ReporterBlockMorph || proc.topBlock instanceof ToneBlockMorph) {
                 if (proc.onComplete instanceof Function) {
                     proc.onComplete(proc.homeContext.inputs[0]);
                 } else {
