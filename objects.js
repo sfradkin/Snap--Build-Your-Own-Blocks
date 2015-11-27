@@ -125,7 +125,7 @@ PrototypeHatBlockMorph*/
 
 // Global stuff ////////////////////////////////////////////////////////
 
-modules.objects = '2015-October-07';
+modules.objects = '2015-November-16';
 
 var SpriteMorph;
 var StageMorph;
@@ -1200,7 +1200,7 @@ SpriteMorph.prototype.initBlocks = function () {
             dev: true,
             type: 'command',
             category: 'lists',
-            spec: 'for %upvar in %l %cs',
+            spec: 'for %upvar in %l %cl',
             defaults: [localize('each item')]
         },
 
@@ -2344,7 +2344,7 @@ SpriteMorph.prototype.freshPalette = function (category) {
                 x = block.right() + unit / 2;
                 ry = block.bottom();
             } else {
-                if (block.fixLayout) {block.fixLayout(); }
+                // if (block.fixLayout) {block.fixLayout(); }
                 x = 0;
                 y += block.height();
             }
@@ -3267,7 +3267,7 @@ SpriteMorph.prototype.bubble = function (data, isThought, isQuestion) {
     if (data === '' || isNil(data)) {return; }
     bubble = new SpriteBubbleMorph(
         data,
-        stage ? stage.scale : 1,
+        stage,
         isThought,
         isQuestion
     );
@@ -3557,6 +3557,7 @@ SpriteMorph.prototype.gotoXY = function (x, y, justMe) {
         newY,
         dest;
 
+    if (!stage) {return; }
     newX = stage.center().x + (+x || 0) * stage.scale;
     newY = stage.center().y - (+y || 0) * stage.scale;
     if (this.costume) {
@@ -6093,18 +6094,19 @@ SpriteBubbleMorph.uber = SpeechBubbleMorph.prototype;
 
 // SpriteBubbleMorph instance creation:
 
-function SpriteBubbleMorph(data, scale, isThought, isQuestion) {
-    this.init(data, scale, isThought, isQuestion);
+function SpriteBubbleMorph(data, stage, isThought, isQuestion) {
+    this.init(data, stage, isThought, isQuestion);
 }
 
 SpriteBubbleMorph.prototype.init = function (
     data,
-    scale,
+    stage,
     isThought,
     isQuestion
 ) {
     var sprite = SpriteMorph.prototype;
-    this.scale = scale || 1;
+    this.stage = stage;
+    this.scale = stage ? stage.scale : 1;
     this.data = data;
     this.isQuestion = isQuestion;
 
@@ -6164,6 +6166,11 @@ SpriteBubbleMorph.prototype.dataAsMorph = function (data) {
         contents.isDraggable = false;
         contents.update(true);
         contents.step = contents.update;
+        if (this.stage) {
+            contents.expand(this.stage.extent().translateBy(
+                -2 * (this.edge + this.border + this.padding)
+            ));
+        }
     } else if (data instanceof Context) {
         img = data.image();
         contents = new Morph();
