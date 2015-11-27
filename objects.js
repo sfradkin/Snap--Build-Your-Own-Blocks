@@ -5221,7 +5221,8 @@ StageMorph.prototype.fireGreenFlagEvent = function () {
     var procs = [],
         hats = [],
         ide = this.parentThatIsA(IDE_Morph),
-        myself = this;
+        myself = this,
+        hasToneChild = false;
 
     this.children.concat(this).forEach(function (morph) {
         if (morph instanceof SpriteMorph || morph instanceof StageMorph) {
@@ -5229,10 +5230,30 @@ StageMorph.prototype.fireGreenFlagEvent = function () {
         }
     });
     hats.forEach(function (block) {
+
+      if (block.children.length > 0) {
+        hasToneChild = block.children.some(function(child) {
+          if (child.selector === 'toneSimpleSynth') {
+            return true;
+          }
+        });
+      }
+
+      block.hasToneChild = hasToneChild;
+
+      if (hasToneChild) {
+        procs.push(myself.threads.startProcess(
+            block,
+            myself.isThreadSafe,
+            false,
+            createAndPlaySynth
+        ));
+      } else {
         procs.push(myself.threads.startProcess(
             block,
             myself.isThreadSafe
         ));
+      }
     });
     if (ide) {
         ide.controlBar.pauseButton.refresh();

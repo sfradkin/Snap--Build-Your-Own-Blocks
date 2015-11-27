@@ -23,21 +23,24 @@ var createAndPlaySynth = function() {
 
   var keys = Object.keys(toneMap);
 
-  // each key is a synth with notes that we need to play
-  // for now, let's just get a single synth to work, so
-  // just use the first key
+  var baseTrigTime = '0.05';
+  var aSynthObj, synth, notes, trigTime;
 
-  var aSynthObj = toneMap[keys[0]];
-  var synth = aSynthObj.synth;
-  var notes = aSynthObj.notes;
+  keys.forEach(function(key) {
+    aSynthObj = toneMap[key];
+    synth = aSynthObj.synth;
+    notes = aSynthObj.notes;
 
-  var trigTime = '0.01';
+    // reset trig time
+    trigTime = baseTrigTime;
 
-  console.log('going through notes array for synth obj: ' + aSynthObj.id);
-  notes.forEach(function(entry) {
-    console.log('triggering note');
-    synth.triggerAttackRelease(entry.note, entry.time, '+' + trigTime);
-    trigTime = trigTime + ' + ' + entry.time;
+    console.log('going through notes array for synth obj: ' + aSynthObj.id);
+    notes.forEach(function(entry) {
+      console.log('triggering note: ' + entry.note + ' for length: ' + entry.time + ' at time: ' + '+' + trigTime);
+      synth.triggerAttackRelease(entry.note, entry.time, '+' + trigTime);
+      trigTime = trigTime + ' + ' + entry.time;
+    });
+
   });
 
 };
