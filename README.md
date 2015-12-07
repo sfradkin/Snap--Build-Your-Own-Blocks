@@ -13,7 +13,12 @@ The app should respond to clicks on a synth block and play the defined notes.
 The user is able to create multiple synth blocks with notes and trigger the blocks
 by a Green Flag block and they will all play at the same time.
 
+Working towards being able to redefine blocks in a basic sequence and then
+re-evaluate the blocks. This will allow for live coding to occur.
+
 Things up next to implement:
+- Fix issues with timing
+- Fix issues with re-eval of blocks so that this works as a live coding environment
 - Clicking on a block that starts with a green flag block doesn't work
 - Add new C-block that implements a Tone reverb effect that can be applied
   around a synth block
