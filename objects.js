@@ -204,7 +204,7 @@ SpriteMorph.prototype.bubbleMaxTextWidth = 130;
 SpriteMorph.prototype.initBlocks = function () {
     SpriteMorph.prototype.blocks = {
 
-        toneTest: {
+        toneNote: {
           only: SpriteMorph,
           type: 'command',
           category: 'tone',
@@ -1755,7 +1755,7 @@ SpriteMorph.prototype.blockTemplates = function (category) {
         }
     }
     if (cat === 'tone') {
-      blocks.push(block('toneTest'));
+      blocks.push(block('toneNote'));
       blocks.push(block('toneSimpleSynth'));
     } else if (cat === 'motion') {
 
@@ -5268,6 +5268,7 @@ StageMorph.prototype.fireStopAllEvent = function () {
     this.keysPressed = {};
     this.threads.stopAll();
     this.stopAllActiveSounds();
+    stopTone();
     this.children.forEach(function (morph) {
         if (morph.stopTalking) {
             morph.stopTalking();

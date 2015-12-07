@@ -1,47 +1,133 @@
 var toneMap = {};
 
+var shortestOffsetTime = function() {
+  var keys = Object.keys(toneMap);
+
+  var shortestOffset = -1;
+
+  keys.forEach(function(key) {
+    synthObj = toneMap[key];
+
+    if (shortestOffset === -1) {
+      shortestOffset = synthObj.totalLoopOffset;
+    } else {
+      if (synthObj.totalLoopOffset < shortestOffset) {
+        shortestOffset = synthObj.totalLoopOffset;
+      }
+    }
+  });
+
+  return shortestOffset - 0.05 > 0 ? shortestOffset - 0.05 : 0.05;
+};
+
+var endRecordedMode = function() {
+  var keys = Object.keys(toneMap);
+
+  return keys.some(function(key) {
+    synthObj = toneMap[key];
+
+    if (!synthObj.recordedMode) {
+      return true;
+    } else {
+      return false;
+    }
+  });
+};
+
 var addSynthToToneMap = function(toneSynth) {
   var existingSynth = toneMap[toneSynth.id];
 
   if (!existingSynth) {
     toneMap[toneSynth.id] = toneSynth;
-  } else {
-    // reset notes array
-    existingSynth.clearNotes();
   }
+
+  console.log('start time: ' + toneSynth.startTime);
 };
 
-var addNoteToToneMap = function(id, noteObj) {
+var scheduleNote = function(id, noteObj) {
   var existingSynth = toneMap[id];
 
   if (existingSynth) {
-    existingSynth.addNote(noteObj);
+    console.log('playing note: ' + noteObj.note + ' for length: ' + noteObj.time + ' at time: ' + existingSynth.nextTime);
+    existingSynth.synth.triggerAttackRelease(noteObj.note, noteObj.time, existingSynth.nextTime);
+
+    existingSynth.nextTime = existingSynth.synth.toSeconds('+' + noteObj.time, existingSynth.nextTime);
+
+    existingSynth.offSet += existingSynth.synth.toSeconds(noteObj.time);
+
+    if (!existingSynth.recordedMode) {
+      existingSynth.notes.push(noteObj);
+    }
   }
 };
 
 var createAndPlaySynth = function() {
 
+  console.log('at end of synth block');
+
+  // set a flag on each of the synths to tell it to use "recorded mode"
+  // kick off "recorded mode playback"
   var keys = Object.keys(toneMap);
 
-  var baseTrigTime = '0.05';
-  var aSynthObj, synth, notes, trigTime;
+  keys.forEach(function(key) {
+    synthObj = toneMap[key];
+    synthObj.recordedMode = true;
+    synthObj.totalLoopOffset = synthObj.offSet;
+  });
+
+  doToneRecordedMode();
+
+};
+
+var stopTone = function() {
+  console.log('in stopTone');
+  // set flags on all synths to tell it to stop using "recorded mode"
+  var keys = Object.keys(toneMap);
 
   keys.forEach(function(key) {
-    aSynthObj = toneMap[key];
-    synth = aSynthObj.synth;
-    notes = aSynthObj.notes;
-
-    // reset trig time
-    trigTime = baseTrigTime;
-
-    console.log('going through notes array for synth obj: ' + aSynthObj.id);
-    notes.forEach(function(entry) {
-      console.log('triggering note: ' + entry.note + ' for length: ' + entry.time + ' at time: ' + '+' + trigTime);
-      synth.triggerAttackRelease(entry.note, entry.time, '+' + trigTime);
-      trigTime = trigTime + ' + ' + entry.time;
-    });
-
+    synthObj = toneMap[key];
+    synthObj.recordedMode = false;
   });
+
+  // stop the Transport
+  Tone.Transport.stop();
+};
+
+var doToneRecordedMode = function() {
+  var synthObj, notes;
+  var loopStart = {};
+  var loopEnd = {};
+  var keys = Object.keys(toneMap);
+
+  Tone.Transport.setInterval(function() {
+    console.log('---------callback 1 fired at ' + Tone.Transport.now());
+    keys.forEach(function(key) {
+
+      synthObj = toneMap[key];
+
+      console.log('transport status: ' + Tone.Transport.state);
+      console.log('synthObj.recordedMode = ' + synthObj.recordedMode);
+      console.log('creating timeout, setting time to timeout as ' + (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - synthObj.synth.now() - 0.05) : 0.05));
+
+      Tone.Transport.setTimeout(function() {
+        console.log('---------in callback 2 fired at ' + Tone.Transport.now());
+        loopStart[key] = synthObj.synth.now();
+        // check for recorded mode === false here and return right away
+        if (synthObj.recordedMode === false) {
+          return;
+        }
+
+        notes = synthObj.notes;
+
+        notes.forEach(function(noteObj) {
+          if (synthObj.recordedMode) {
+            scheduleNote(synthObj.id, noteObj);
+          }
+        });
+        loopEnd[key] = synthObj.synth.now();
+      }, (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - synthObj.synth.now() - 0.05) : 0.05));
+    });
+  }, shortestOffsetTime());
 
 };
 
@@ -50,14 +136,11 @@ function ToneSynth(id, synth) {
   this.id = id;
   this.synth = synth;
   this.notes = [];
-};
-
-ToneSynth.prototype.addNote = function(noteobj) {
-  this.notes.push(noteobj);
-};
-
-ToneSynth.prototype.clearNotes = function() {
-  this.notes = [];
+  this.startTime = synth.now();
+  this.nextTime = this.startTime + 0.05;
+  this.offSet = 0;
+  this.totalLoopOffset = 0;
+  this.recordedMode = false;
 };
 
 ToneBlockMorph.prototype = new CommandBlockMorph();
@@ -94,15 +177,34 @@ ToneBlockMorph.prototype.reactToTemplateCopy = function() {
 };
 
 Process.prototype.toneSimpleSynth = function (body) {
+
+  if (Tone.Transport.state === 'stopped') {
+    console.log('starting transport');
+    Tone.Transport.start();
+    console.log('transport state ' + Tone.Transport.state);
+  } else {
+    Tone.Transport.clearIntervals();
+    Tone.Transport.clearTimeouts();
+  }
+
   console.log('id of simple synth: ' + this.context.expression.id);
   // create the synth object here and store it in the toneMap
 
-  var synth = new Tone.MonoSynth({type: 'sine'});
-  synth.toMaster();
+  var existingSynth = toneMap[this.context.expression.id];
 
-  var toneSynth = new ToneSynth(this.context.expression.id, synth);
+  if (!existingSynth) {
 
-  addSynthToToneMap(toneSynth);
+    var synth = new Tone.MonoSynth({type: 'sine'});
+    synth.toMaster();
+    synth.oscillator.sync();
+
+    var toneSynth = new ToneSynth(this.context.expression.id, synth);
+
+    addSynthToToneMap(toneSynth);
+    existingSynth = toneSynth;
+  } else {
+    existingSynth.recordedMode = false;
+  }
 
   var outer = this.context.outerContext;
   outer.expression = this.context.expression.id;
@@ -111,13 +213,14 @@ Process.prototype.toneSimpleSynth = function (body) {
           this.pushContext(body.blockSequence(), outer);
       }
   this.pushContext();
+
 };
 
-Process.prototype.toneTest = function(note, time) {
+Process.prototype.toneNote = function(note, time) {
   var outerId = this.context.outerContext.expression;
   console.log('in Process.toneTest function, outerId = ' + outerId);
 
-  addNoteToToneMap(outerId, {note: note, time: time});
+  scheduleNote(outerId, {note: note, time: time});
   return null;
 
 };
