@@ -48,8 +48,12 @@ var scheduleNote = function(id, noteObj) {
   var existingSynth = toneMap[id];
 
   if (existingSynth) {
-    console.log('playing note: ' + noteObj.note + ' for length: ' + noteObj.time + ' at time: ' + existingSynth.nextTime);
-    existingSynth.synth.triggerAttackRelease(noteObj.note, noteObj.time, existingSynth.nextTime);
+    console.log('setting callback: ' + noteObj.note + ' for length: ' + noteObj.time + ' at time: ' + existingSynth.nextTime);
+
+    Tone.Transport.scheduleOnce(function(time) {
+      console.log('playing note: ' + noteObj.note + ' for length: ' + noteObj.time + ' at time: ' + existingSynth.synth.now());
+      existingSynth.synth.triggerAttackRelease(noteObj.note, noteObj.time);
+    }, '+' + (existingSynth.nextTime - existingSynth.synth.now()));
 
     existingSynth.nextTime = existingSynth.synth.toSeconds('+' + noteObj.time, existingSynth.nextTime);
 
@@ -99,7 +103,8 @@ var doToneRecordedMode = function() {
   var loopEnd = {};
   var keys = Object.keys(toneMap);
 
-  Tone.Transport.setInterval(function() {
+  console.log('time now: ' + Tone.Transport.now() + ', schedule callback 1 for: ' + '+' + shortestOffsetTime());
+  Tone.Transport.scheduleOnce(function(time) {
     console.log('---------callback 1 fired at ' + Tone.Transport.now());
     keys.forEach(function(key) {
 
@@ -107,9 +112,9 @@ var doToneRecordedMode = function() {
 
       console.log('transport status: ' + Tone.Transport.state);
       console.log('synthObj.recordedMode = ' + synthObj.recordedMode);
-      console.log('creating timeout, setting time to timeout as ' + (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - synthObj.synth.now() - 0.05) : 0.05));
+      console.log('time now: ' + Tone.Transport.now() + ', schedule callback 2 for: ' + (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - synthObj.synth.now() - 0.05) : 0.05));
 
-      Tone.Transport.setTimeout(function() {
+      Tone.Transport.scheduleOnce(function(time) {
         console.log('---------in callback 2 fired at ' + Tone.Transport.now());
         loopStart[key] = synthObj.synth.now();
         // check for recorded mode === false here and return right away
@@ -125,9 +130,9 @@ var doToneRecordedMode = function() {
           }
         });
         loopEnd[key] = synthObj.synth.now();
-      }, (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - synthObj.synth.now() - 0.05) : 0.05));
+      }, '+' + (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - synthObj.synth.now() - 0.05) : 0.05));
     });
-  }, shortestOffsetTime());
+  }, '+' + shortestOffsetTime());
 
 };
 
@@ -183,8 +188,7 @@ Process.prototype.toneSimpleSynth = function (body) {
     Tone.Transport.start();
     console.log('transport state ' + Tone.Transport.state);
   } else {
-    Tone.Transport.clearIntervals();
-    Tone.Transport.clearTimeouts();
+    Tone.Transport.cancel();
   }
 
   console.log('id of simple synth: ' + this.context.expression.id);
