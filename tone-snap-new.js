@@ -1,39 +1,5 @@
 var toneMap = {};
 
-var shortestOffsetTime = function() {
-  var keys = Object.keys(toneMap);
-
-  var shortestOffset = -1;
-
-  keys.forEach(function(key) {
-    synthObj = toneMap[key];
-
-    if (shortestOffset === -1) {
-      shortestOffset = synthObj.totalLoopOffset;
-    } else {
-      if (synthObj.totalLoopOffset < shortestOffset) {
-        shortestOffset = synthObj.totalLoopOffset;
-      }
-    }
-  });
-
-  return shortestOffset - 0.05 > 0 ? shortestOffset - 0.05 : 0.05;
-};
-
-var endRecordedMode = function() {
-  var keys = Object.keys(toneMap);
-
-  return keys.some(function(key) {
-    synthObj = toneMap[key];
-
-    if (!synthObj.recordedMode) {
-      return true;
-    } else {
-      return false;
-    }
-  });
-};
-
 var addSynthToToneMap = function(toneSynth) {
   var existingSynth = toneMap[toneSynth.id];
 
@@ -41,33 +7,42 @@ var addSynthToToneMap = function(toneSynth) {
     toneMap[toneSynth.id] = toneSynth;
   }
 
-  console.log('start time: ' + toneSynth.startTime);
 };
 
-var scheduleNote = function(id, noteObj) {
+var scheduleNote = function(id, noteObj, store) {
   var existingSynth = toneMap[id];
 
   if (existingSynth) {
-    console.log('setting callback: ' + noteObj.note + ' for length: ' + noteObj.time + ' at time: ' + existingSynth.nextTime);
+    // convert note length into seconds
+    noteObj.seconds = Tone.Transport.toSeconds(noteObj.time);
+
+    console.log('scheduling note: ', noteObj.note, ' for length: ', noteObj.time, ' which is: ', noteObj.seconds, 's and at virtual time: ', existingSynth.curVirtTime);
+    console.log('schedule note at transport tick: ', (existingSynth.transportTimeStart + existingSynth.offSetTicks));
 
     Tone.Transport.scheduleOnce(function(time) {
-      console.log('playing note: ' + noteObj.note + ' for length: ' + noteObj.time + ' at time: ' + existingSynth.synth.now());
+      console.log('playing note: ' + noteObj.note + ' for length: ' + noteObj.time + ' at transport tick time: ' + Tone.Transport.ticks);
       existingSynth.synth.triggerAttackRelease(noteObj.note, noteObj.time);
-    }, '+' + (existingSynth.nextTime - existingSynth.synth.now()));
+    }, (existingSynth.transportTimeStart + existingSynth.offSetTicks) + 'i');
 
-    existingSynth.nextTime = existingSynth.synth.toSeconds('+' + noteObj.time, existingSynth.nextTime);
+    // update the virtual time of the synth
+    existingSynth.curVirtTime = existingSynth.curVirtTime + noteObj.seconds;
+
+    //existingSynth.nextTime = existingSynth.synth.toSeconds('+' + noteObj.time, existingSynth.nextTime);
 
     existingSynth.offSet += existingSynth.synth.toSeconds(noteObj.time);
+    existingSynth.offSetTicks = Tone.Transport.toTicks(existingSynth.offSet);
+    console.log('offset time in seconds: ', existingSynth.offSet, ' offset time in ticks: ', existingSynth.offSetTicks);
 
-    if (!existingSynth.recordedMode) {
+    if (store) {
       existingSynth.notes.push(noteObj);
+      existingSynth.loopTime = existingSynth.loopTime + noteObj.seconds;
     }
   }
 };
 
-var createAndPlaySynth = function() {
+var createAndPlaySynth = function(synthid) {
 
-  console.log('at end of synth block');
+  console.log('at end of synth block: ', synthid);
 
   // set a flag on each of the synths to tell it to use "recorded mode"
   // kick off "recorded mode playback"
@@ -85,16 +60,19 @@ var createAndPlaySynth = function() {
 
 var stopTone = function() {
   console.log('in stopTone');
-  // set flags on all synths to tell it to stop using "recorded mode"
-  var keys = Object.keys(toneMap);
 
-  keys.forEach(function(key) {
-    synthObj = toneMap[key];
-    synthObj.recordedMode = false;
-  });
-
+  console.log('stopping transport');
   // stop the Transport
   Tone.Transport.stop();
+
+  // clean up synths
+  var keys = Object.keys(toneMap);
+
+  console.log('cleaning up synths');
+  keys.forEach(function(key) {
+    synthObj = toneMap[key];
+    synthObj.synth.dispose();
+  });
 };
 
 var doToneRecordedMode = function() {
@@ -103,37 +81,36 @@ var doToneRecordedMode = function() {
   var loopEnd = {};
   var keys = Object.keys(toneMap);
 
-  console.log('time now: ' + Tone.Transport.now() + ', schedule callback 1 for: ' + '+' + shortestOffsetTime());
-  Tone.Transport.scheduleOnce(function(time) {
-    console.log('---------callback 1 fired at ' + Tone.Transport.now());
     keys.forEach(function(key) {
 
       synthObj = toneMap[key];
 
-      console.log('transport status: ' + Tone.Transport.state);
-      console.log('synthObj.recordedMode = ' + synthObj.recordedMode);
-      console.log('time now: ' + Tone.Transport.now() + ', schedule callback 2 for: ' + (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - synthObj.synth.now() - 0.05) : 0.05));
+      console.log('time now: ', Tone.Transport.now(), ', schedule periodic callback 1 for synth id: ', synthObj.id, ' every ', (synthObj.loopTime - 0.05));
+      Tone.Transport.scheduleRepeat(function(time) {
+        console.log('---------callback 1 fired at ' + Tone.Transport.now());
+      //console.log('transport status: ' + Tone.Transport.state);
+      //console.log('synthObj.recordedMode = ' + synthObj.recordedMode);
+      //console.log('time now: ' + Tone.Transport.now() + ', schedule callback 2 for: ' + (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - Tone.Transport.now() - 0.05) : 0.05));
 
-      Tone.Transport.scheduleOnce(function(time) {
-        console.log('---------in callback 2 fired at ' + Tone.Transport.now());
-        loopStart[key] = synthObj.synth.now();
-        // check for recorded mode === false here and return right away
-        if (synthObj.recordedMode === false) {
-          return;
-        }
+      // Tone.Transport.scheduleOnce(function(time) {
+      //   console.log('---------in callback 2 fired at ' + Tone.Transport.now());
+      //   loopStart[key] = Tone.Transport.now();
+      //   // check for recorded mode === false here and return right away
+      //   if (synthObj.recordedMode === false) {
+      //     return;
+      //   }
 
         notes = synthObj.notes;
 
         notes.forEach(function(noteObj) {
-          if (synthObj.recordedMode) {
-            scheduleNote(synthObj.id, noteObj);
-          }
+          //if (synthObj.recordedMode) {
+            scheduleNote(synthObj.id, noteObj, false);
+          //}
         });
-        loopEnd[key] = synthObj.synth.now();
-      }, '+' + (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - synthObj.synth.now() - 0.05) : 0.05));
+        //loopEnd[key] = synthObj.synth.now();
+    //  }, '+' + (loopStart[key] ? ((loopStart[key] + synthObj.totalLoopOffset) - Tone.Transport.now() - 0.05) : 0.05));
+      }, (synthObj.loopTime - 0.05));
     });
-  }, '+' + shortestOffsetTime());
-
 };
 
 ToneSynth.prototype = new Object();
@@ -141,11 +118,15 @@ function ToneSynth(id, synth) {
   this.id = id;
   this.synth = synth;
   this.notes = [];
-  this.startTime = synth.now();
-  this.nextTime = this.startTime + 0.05;
-  this.offSet = 0;
-  this.totalLoopOffset = 0;
-  this.recordedMode = false;
+  this.startTime = Tone.Transport.now(); // shouldn't need
+  this.nextTime = this.startTime + 0.05; // shouldn't need
+  this.offSet = 0; // shouldn't need
+  this.totalLoopOffset = 0; // shouldn't need
+  this.recordedMode = false;  // shouldn't need
+  this.transportTimeStart = 0;  // The transport time this synth was started at
+  this.curVirtTime = 0;  // The current virtual time of this synth
+  this.loopTime = 0;  // The time it takes to make a loop of the notes defined in this synth
+  this.offSetTicks = 0;
 };
 
 ToneBlockMorph.prototype = new CommandBlockMorph();
@@ -171,7 +152,7 @@ ToneBlockMorph.prototype.receiveUserInteraction = function(interaction) {
     if (!stage) {return; } // currently dragged
     hats = this.allHatBlocksForInteraction(interaction);
     hats.forEach(function (block) {
-        procs.push(stage.threads.startProcess(block, stage.isThreadSafe, false, createAndPlaySynth()));
+        procs.push(stage.threads.startProcess(block, stage.isThreadSafe, false, createAndPlaySynth));
     });
     return procs;
 };
@@ -182,14 +163,6 @@ ToneBlockMorph.prototype.reactToTemplateCopy = function() {
 };
 
 Process.prototype.toneSimpleSynth = function (body) {
-
-  if (Tone.Transport.state === 'stopped') {
-    console.log('starting transport');
-    Tone.Transport.start();
-    console.log('transport state ' + Tone.Transport.state);
-  } else {
-    Tone.Transport.cancel();
-  }
 
   console.log('id of simple synth: ' + this.context.expression.id);
   // create the synth object here and store it in the toneMap
@@ -203,6 +176,8 @@ Process.prototype.toneSimpleSynth = function (body) {
     synth.oscillator.sync();
 
     var toneSynth = new ToneSynth(this.context.expression.id, synth);
+    toneSynth.transportTimeStart = Tone.Transport.ticks;
+    toneSynth.curVirtTime = 0;
 
     addSynthToToneMap(toneSynth);
     existingSynth = toneSynth;
@@ -224,7 +199,7 @@ Process.prototype.toneNote = function(note, time) {
   var outerId = this.context.outerContext.expression;
   console.log('in Process.toneTest function, outerId = ' + outerId);
 
-  scheduleNote(outerId, {note: note, time: time});
+  scheduleNote(outerId, {note: note, time: time}, true);  // when processing the actual note block we send a boolean true to store for later
   return null;
 
 };

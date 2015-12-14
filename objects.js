@@ -5243,6 +5243,7 @@ StageMorph.prototype.fireGreenFlagEvent = function () {
       block.hasToneChild = hasToneChild;
 
       if (hasToneChild) {
+        console.log('green flag event, has tone child, start process');
         procs.push(myself.threads.startProcess(
             block,
             myself.isThreadSafe,
@@ -5268,7 +5269,7 @@ StageMorph.prototype.fireStopAllEvent = function () {
     this.keysPressed = {};
     this.threads.stopAll();
     this.stopAllActiveSounds();
-    stopTone();
+    stopTone(); // stopping everything, so we need to call our stopTone() function to clean things up
     this.children.forEach(function (morph) {
         if (morph.stopTalking) {
             morph.stopTalking();
