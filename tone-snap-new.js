@@ -19,10 +19,14 @@ var scheduleNote = function(id, noteObj, store) {
     console.log('scheduling note: ', noteObj.note, ' for length: ', noteObj.time, ' which is: ', noteObj.seconds, 's and at virtual time: ', existingSynth.curVirtTime);
     console.log('schedule note at transport tick: ', (existingSynth.transportTimeStart + existingSynth.offSetTicks));
 
-    Tone.Transport.scheduleOnce(function(time) {
-      console.log('playing note: ' + noteObj.note + ' for length: ' + noteObj.time + ' at transport tick time: ' + Tone.Transport.ticks);
+    var noteEventId = Tone.Transport.scheduleOnce(function(time) {
+      console.log('event id: ', noteEventId, ' playing note: ', noteObj.note, ' for length: ', noteObj.time, ' at transport tick time: ', Tone.Transport.ticks);
       existingSynth.synth.triggerAttackRelease(noteObj.note, noteObj.time);
+      var eventIdx = existingSynth.noteEvents.indexOf(noteEventId);
+      existingSynth.noteEvents.slice(eventIdx, 1);
     }, (existingSynth.transportTimeStart + existingSynth.offSetTicks) + 'i');
+
+    existingSynth.noteEvents.push(noteEventId);
 
     // update the virtual time of the synth
     existingSynth.curVirtTime = existingSynth.curVirtTime + noteObj.seconds;
@@ -103,6 +107,7 @@ function ToneSynth(id, synth) {
   this.curVirtTime = 0;  // The current virtual time of this synth
   this.loopTime = 0;  // The time it takes to make a loop of the notes defined in this synth
   this.offSetTicks = 0;
+  this.noteEvents = [];
 
   var thisSynth = this;
 
@@ -169,10 +174,22 @@ Process.prototype.toneSimpleSynth = function (body) {
 
     addSynthToToneMap(toneSynth);
     existingSynth = toneSynth;
+  } else {
+    // if the synth currently exists, we need to clear out events from the timeline
+    Tone.Transport.clear(existingSynth.scheduled);
+    existingSynth.noteEvents.forEach(function(noteEventId) {
+      Tone.Transport.clear(noteEventId);
+    });
+    existingSynth.noteEvents = [];
+
+    existingSynth.transportTimeStart = Tone.Transport.ticks;
+    existingSynth.curVirtTime = 0;
+    existingSynth.notes = [];
+    existingSynth.offSet = 0;
+    existingSynth.loopTime = 0;
+    existingSynth.offSetTicks = 0;
+    existingSynth.scheduled = undefined;
   }
-  // } else {
-  //   existingSynth.recordedMode = false;
-  // }
 
   var outer = this.context.outerContext;
   outer.expression = this.context.expression.id;

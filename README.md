@@ -3,7 +3,7 @@ This is a customized version of Snap! in which I am attempting to provide
 abstractions for using Tone.js inside of Snap! so that users can create
 much more sophisticated sound.
 
-12-14-2015
+12-22-2015
 
 There is a Tone category of blocks.  Currently there are 2 blocks available.  A
 C-block that defines a synth can hold notes, and a note block that allows the
@@ -13,12 +13,11 @@ The app should respond to clicks on a synth block and play the defined notes.
 The user is able to create multiple synth blocks with notes and trigger the blocks
 by a Green Flag block and they will all play at the same time.
 
-Working towards being able to redefine blocks in a basic sequence and then
-re-evaluate the blocks. This will allow for live coding to occur.
+Clicking on a synth c-block will immediately re-evaluate just that block.
+Any synth c-blocks that also have green flag hats on them to respond to the
+green flag button press will all redefine upon pressing the green flag button.
 
 Things up next to implement:
-- Fix issues with re-eval of blocks so that this works as a live coding environment
-- Clicking on a block that starts with a green flag block partially works
 - Add new C-block that implements a Tone reverb effect that can be applied
   around a synth block
 - Ability to add periods of rest
