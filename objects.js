@@ -204,6 +204,12 @@ SpriteMorph.prototype.bubbleMaxTextWidth = 130;
 SpriteMorph.prototype.initBlocks = function () {
     SpriteMorph.prototype.blocks = {
 
+        toneSimpleSynth: {
+          type: 'toneblock',
+          category: 'tone',
+          spec: 'play notes in synth %c'
+        },
+
         toneNote: {
           only: SpriteMorph,
           type: 'command',
@@ -212,10 +218,12 @@ SpriteMorph.prototype.initBlocks = function () {
           defaults: ['c3', '4n']
         },
 
-        toneSimpleSynth: {
-          type: 'toneblock',
+        toneSleep: {
+          only: SpriteMorph,
+          type: 'command',
           category: 'tone',
-          spec: 'play notes in synth %c'
+          spec: 'silence for time %s',
+          defaults: ['4n']
         },
 
         // Motion
@@ -1766,8 +1774,9 @@ SpriteMorph.prototype.blockTemplates = function (category) {
         }
     }
     if (cat === 'tone') {
-      blocks.push(block('toneNote'));
       blocks.push(block('toneSimpleSynth'));
+      blocks.push(block('toneNote'));
+      blocks.push(block('toneSleep'));
     } else if (cat === 'motion') {
 
         blocks.push(block('forward'));

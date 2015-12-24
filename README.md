@@ -5,9 +5,10 @@ much more sophisticated sound.
 
 12-22-2015
 
-There is a Tone category of blocks.  Currently there are 2 blocks available.  A
-C-block that defines a synth can hold notes, and a note block that allows the
-user to define a note and length.
+There is a Tone category of blocks.  Currently there are 3 blocks available:
+- A C-block that defines a synth can hold notes
+- A note block that allows the user to define a note and length
+- A silence block that allows the user to define a period of silence
 
 The app should respond to clicks on a synth block and play the defined notes.
 The user is able to create multiple synth blocks with notes and trigger the blocks
@@ -20,7 +21,8 @@ green flag button press will all redefine upon pressing the green flag button.
 Things up next to implement:
 - Add new C-block that implements a Tone reverb effect that can be applied
   around a synth block
-- Ability to add periods of rest
+- Modify re-evaluation of blocks to ensure current loops fully end before
+  starting newly evaluated blocks
 - Ability to change the type of synth
 - Other effects
 - Ability to modify aspects of synths

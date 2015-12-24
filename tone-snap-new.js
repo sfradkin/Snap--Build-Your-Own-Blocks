@@ -19,9 +19,12 @@ var scheduleNote = function(id, noteObj, store) {
     console.log('scheduling note: ', noteObj.note, ' for length: ', noteObj.time, ' which is: ', noteObj.seconds, 's and at virtual time: ', existingSynth.curVirtTime);
     console.log('schedule note at transport tick: ', (existingSynth.transportTimeStart + existingSynth.offSetTicks));
 
+
     var noteEventId = Tone.Transport.scheduleOnce(function(time) {
       console.log('event id: ', noteEventId, ' playing note: ', noteObj.note, ' for length: ', noteObj.time, ' at transport tick time: ', Tone.Transport.ticks);
-      existingSynth.synth.triggerAttackRelease(noteObj.note, noteObj.time);
+      if (noteObj.note !== 'sleep') {
+        existingSynth.synth.triggerAttackRelease(noteObj.note, noteObj.time);
+      }
       var eventIdx = existingSynth.noteEvents.indexOf(noteEventId);
       existingSynth.noteEvents.slice(eventIdx, 1);
     }, (existingSynth.transportTimeStart + existingSynth.offSetTicks) + 'i');
@@ -203,9 +206,18 @@ Process.prototype.toneSimpleSynth = function (body) {
 
 Process.prototype.toneNote = function(note, time) {
   var outerId = this.context.outerContext.expression;
-  console.log('in Process.toneTest function, outerId = ' + outerId);
+  console.log('in Process.toneNote function, outerId = ' + outerId);
 
   scheduleNote(outerId, {note: note, time: time}, true);  // when processing the actual note block we send a boolean true to store for later
+  return null;
+
+};
+
+Process.prototype.toneSleep = function(time) {
+  var outerId = this.context.outerContext.expression;
+  console.log('in Process.toneSleep function, outerId = ' + outerId);
+
+  scheduleNote(outerId, {note: 'sleep', time: time}, true);  // when processing the actual note block we send a boolean true to store for later
   return null;
 
 };
