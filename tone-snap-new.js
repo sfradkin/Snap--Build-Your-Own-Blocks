@@ -188,19 +188,38 @@ Process.prototype.toneFx = function(fxType, body) {
   console.log('fxType: ', fxType, ' body: ', body);
 
   var existingFxNode = toneFxMap[this.context.expression.id];
+  var toneFxNode;
+  var toneNode;
 
   if (!existingFxNode) {
     if (fxType === 'reverb') {
-      console.log('creating new tone fx node');
-      toneFxNode = new Tone.Freeverb();
-
-      var toneFxNode = new ToneFx(this.context.expression.id, toneFxNode, fxType);
-      addFxToToneMap(toneFxNode);
-
-      console.log('current fx map: ', toneFxMap);
-
-      existingFxNode = toneFxNode;
+      console.log('creating new Reverb node');
+      toneNode = new Tone.Freeverb();
+    } else if (fxType === 'tremolo') {
+      console.log('creating new Tremolo node');
+      toneNode = new Tone.Tremolo();
+      // tremolo requires the LFO of the Tremolo to be started
+      // until I figure out the best way to do this, tremolo will be disabled
+    } else if (fxType === 'vibrato') {
+      console.log('creating new Vibrato node');
+      toneNode = new Tone.Vibrato();
+    } else if (fxType === 'bitcrusher') {
+      console.log('creating new bitcrusher node');
+      toneNode = new Tone.BitCrusher();
+    } else if (fxType === 'distortion') {
+      console.log('creating new distortion node');
+      toneNode = new Tone.Distortion();
+    } else if (fxType === 'phaser') {
+      console.log('creating new phaser node');
+      toneNode = new Tone.Phaser();
     }
+
+    toneFxNode = new ToneFx(this.context.expression.id, toneNode, fxType);
+    addFxToToneMap(toneFxNode);
+
+    console.log('current fx map: ', toneFxMap);
+
+    existingFxNode = toneFxNode;
   }
 
   var outer = this.context.outerContext;

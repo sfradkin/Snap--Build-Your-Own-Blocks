@@ -1433,7 +1433,12 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             part = new InputSlotMorph(
                 null,
                 false,
-                {   reverb : 'reverb'
+                {   reverb : 'reverb',
+                    //tremolo : 'tremolo',
+                    vibrato : 'vibrato',
+                    bitcrusher : 'bitcrusher',
+                    distortion : 'distortion',
+                    phaser : 'phaser'
                 },
                 true
             );
