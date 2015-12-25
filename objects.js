@@ -210,6 +210,12 @@ SpriteMorph.prototype.initBlocks = function () {
           spec: 'play notes in synth %c'
         },
 
+        toneFx: {
+          type: 'toneblock',
+          category: 'tone',
+          spec: 'add fx %tonefx for %c'
+        },
+
         toneNote: {
           only: SpriteMorph,
           type: 'command',
@@ -1775,6 +1781,7 @@ SpriteMorph.prototype.blockTemplates = function (category) {
     }
     if (cat === 'tone') {
       blocks.push(block('toneSimpleSynth'));
+      blocks.push(block('toneFx'));
       blocks.push(block('toneNote'));
       blocks.push(block('toneSleep'));
     } else if (cat === 'motion') {

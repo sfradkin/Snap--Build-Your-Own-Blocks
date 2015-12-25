@@ -1,10 +1,20 @@
 var toneMap = {};
+var toneFxMap = {};
 
 var addSynthToToneMap = function(toneSynth) {
   var existingSynth = toneMap[toneSynth.id];
 
   if (!existingSynth) {
     toneMap[toneSynth.id] = toneSynth;
+  }
+
+};
+
+var addFxToToneMap = function(toneFx) {
+  var existingFx = toneFxMap[toneFx.id];
+
+  if (!existingFx) {
+    toneFxMap[toneFx.id] = toneFx;
   }
 
 };
@@ -79,7 +89,15 @@ var stopTone = function() {
     synthObj.synth.dispose();
   });
 
+  console.log('cleaning up fx nodes');
+  keys = Object.keys(toneFxMap);
+  keys.forEach(function(key) {
+    fxNode = toneFxMap[key];
+    fxNode.fxNode.dispose();
+  });
+
   toneMap = {};
+  toneFxMap = {};
   Tone.Transport.cancel();
 };
 
@@ -125,6 +143,13 @@ function ToneSynth(id, synth) {
   };
 };
 
+ToneFx.prototype = new Object();
+function ToneFx(id, fxNode, fxType) {
+  this.id = id;
+  this.fxNode = fxNode;
+  this.fxType = fxType;
+};
+
 ToneBlockMorph.prototype = new CommandBlockMorph();
 ToneBlockMorph.prototype.constructor = ToneBlockMorph;
 ToneBlockMorph.uber = CommandBlockMorph.prototype;
@@ -158,9 +183,43 @@ ToneBlockMorph.prototype.reactToTemplateCopy = function() {
   this.id = '' + (Math.random() * (100 - 0) + 0);
 };
 
-Process.prototype.toneSimpleSynth = function (body) {
+Process.prototype.toneFx = function(fxType, body) {
+  console.log('id of fx node: ', this.context.expression.id);
+  console.log('fxType: ', fxType, ' body: ', body);
 
-  console.log('id of simple synth: ' + this.context.expression.id);
+  var existingFxNode = toneFxMap[this.context.expression.id];
+
+  if (!existingFxNode) {
+    if (fxType === 'reverb') {
+      console.log('creating new tone fx node');
+      toneFxNode = new Tone.Freeverb();
+
+      var toneFxNode = new ToneFx(this.context.expression.id, toneFxNode, fxType);
+      addFxToToneMap(toneFxNode);
+
+      console.log('current fx map: ', toneFxMap);
+
+      existingFxNode = toneFxNode;
+    }
+  }
+
+  var outer = this.context.outerContext;
+  outer.expression = {id: this.context.expression.id, type: 'fx'};
+  this.popContext();
+  if (body) {
+      this.pushContext(body.blockSequence(), outer);
+  }
+  this.pushContext();
+
+};
+
+Process.prototype.toneSimpleSynth = function(body) {
+
+  console.log('id of simple synth: ', this.context.expression.id);
+
+  console.log('outer context: ', this.context.outerContext.expression);
+  var outerContextObj = this.context.outerContext.expression;
+
   // create the synth object here and store it in the toneMap
 
   var existingSynth = toneMap[this.context.expression.id];
@@ -168,7 +227,18 @@ Process.prototype.toneSimpleSynth = function (body) {
   if (!existingSynth) {
 
     var synth = new Tone.MonoSynth({type: 'sine'});
-    synth.toMaster();
+
+    if (outerContextObj) {
+      if (outerContextObj.type === 'fx') {
+        var fxNode = toneFxMap[outerContextObj.id];
+        console.log('found fx node: ', fxNode);
+        fxNode.fxNode.toMaster();
+        synth.connect(fxNode.fxNode);
+      }
+    } else {
+      synth.toMaster();
+    }
+
     synth.oscillator.sync();
 
     var toneSynth = new ToneSynth(this.context.expression.id, synth);

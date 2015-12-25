@@ -1429,6 +1429,16 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
                     new Point() : this.embossing;
             part.drawNew();
             break;
+        case '%tonefx':
+            part = new InputSlotMorph(
+                null,
+                false,
+                {   reverb : 'reverb'
+                },
+                true
+            );
+            part.setContents('reverb');
+            break;
         default:
             nop();
         }

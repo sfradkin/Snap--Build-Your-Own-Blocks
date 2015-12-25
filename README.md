@@ -5,27 +5,32 @@ much more sophisticated sound.
 
 12-22-2015
 
-There is a Tone category of blocks.  Currently there are 3 blocks available:
+There is a Tone category of blocks.  Currently there are 4 blocks available:
 - A C-block that defines a synth can hold notes
 - A note block that allows the user to define a note and length
 - A silence block that allows the user to define a period of silence
+- A C-block that defines FX that can be applied to everything inside
+- Reverb FX available
 
-The app should respond to clicks on a synth block and play the defined notes.
-The user is able to create multiple synth blocks with notes and trigger the blocks
+The app should respond to clicks on a synth/fx block and play the defined notes.
+The user is able to create multiple synth/fx blocks with notes and trigger the blocks
 by a Green Flag block and they will all play at the same time.
 
-Clicking on a synth c-block will immediately re-evaluate just that block.
-Any synth c-blocks that also have green flag hats on them to respond to the
+Clicking on a synth/fx c-block will immediately re-evaluate just that block.
+Any synth/fx c-blocks that also have green flag hats on them to respond to the
 green flag button press will all redefine upon pressing the green flag button.
 
 Things up next to implement:
-- Add new C-block that implements a Tone reverb effect that can be applied
-  around a synth block
+- Fix adding/removing FX blocks without stopping, currently does not connect/
+  disconnect correctly
 - Modify re-evaluation of blocks to ensure current loops fully end before
   starting newly evaluated blocks
 - Ability to change the type of synth
 - Other effects
 - Ability to modify aspects of synths
+- Chords
+- Scales
+- Looping over lists of notes
 - More of the full Tone functionality
 
 -----------------------------------
