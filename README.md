@@ -3,14 +3,14 @@ This is a customized version of Snap! in which I am attempting to provide
 abstractions for using Tone.js inside of Snap! so that users can create
 much more sophisticated sound.
 
-12-22-2015
+12-25-2015
 
 There is a Tone category of blocks.  Currently there are 4 blocks available:
 - A C-block that defines a synth can hold notes
 - A note block that allows the user to define a note and length
 - A silence block that allows the user to define a period of silence
 - A C-block that defines FX that can be applied to everything inside
-- Reverb FX available
+- Reverb, vibrato, bitcrusher, distortion, and phaser FX available
 
 The app should respond to clicks on a synth/fx block and play the defined notes.
 The user is able to create multiple synth/fx blocks with notes and trigger the blocks
@@ -26,8 +26,8 @@ Things up next to implement:
 - Modify re-evaluation of blocks to ensure current loops fully end before
   starting newly evaluated blocks
 - Ability to change the type of synth
-- Other effects
-- Ability to modify aspects of synths
+- Add ability to modify fx parameters
+- Ability to modify parameters of synths
 - Chords
 - Scales
 - Looping over lists of notes
