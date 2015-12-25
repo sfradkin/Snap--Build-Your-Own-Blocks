@@ -2819,3 +2819,18 @@ end - bulk of 151215
 151219
 ------
 * Objects: Optimization: Don’t redraw unrotateable sprites on TURN
+
+151221
+------
+* Morphic: Native Copy & Paste support, thanks, @cyderize, for this contribution!!
+* GUI: Code tweaks
+* Portuguese translation update, thanks, Manuel!
+
+151222
+------
+* Blocks, Objects, Threads, Locale: revert to ’any key’ in the key-pressed menu
+* GUI: Improve sorting and tab switching in the Project Dialog, Thanks, Michael!
+
+151223
+------
+* Morphic: fixed #1083

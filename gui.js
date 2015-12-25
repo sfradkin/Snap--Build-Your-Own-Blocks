@@ -71,7 +71,7 @@ BlockRemovalDialogMorph, saveAs*/
 
 // Global stuff ////////////////////////////////////////////////////////
 
-modules.gui = '2015-December-15';
+modules.gui = '2015-December-22';
 
 // Declarations
 
@@ -221,6 +221,7 @@ IDE_Morph.prototype.init = function (isAutoFill) {
     this.projectName = '';
     this.projectNotes = '';
 
+    this.logoURL = 'snap_logo_sm.png';
     this.logo = null;
     this.controlBar = null;
     this.categories = null;
@@ -487,7 +488,7 @@ IDE_Morph.prototype.createLogo = function () {
     }
 
     this.logo = new Morph();
-    this.logo.texture = 'snap_logo_sm.png';
+    this.logo.texture = this.logoURL;
     this.logo.drawNew = function () {
         this.image = newCanvas(this.extent());
         var context = this.image.getContext('2d'),
@@ -5111,7 +5112,10 @@ ProjectDialogMorph.prototype.setSource = function (source) {
         this.projectList = [];
         SnapCloud.getProjectList(
             function (projectList) {
-                myself.installCloudProjectList(projectList);
+                // Don't show cloud projects if user has since switch panes.
+                if (myself.source === 'cloud') {
+                    myself.installCloudProjectList(projectList);
+                }
                 msg.destroy();
             },
             function (err, lbl) {
@@ -5226,7 +5230,7 @@ ProjectDialogMorph.prototype.getLocalProjectList = function () {
         }
     }
     projects.sort(function (x, y) {
-        return x.name < y.name ? -1 : 1;
+        return x.name.toLowerCase() < y.name.toLowerCase() ? -1 : 1;
     });
     return projects;
 };
@@ -5239,7 +5243,8 @@ ProjectDialogMorph.prototype.installCloudProjectList = function (pl) {
     var myself = this;
     this.projectList = pl || [];
     this.projectList.sort(function (x, y) {
-        return x.ProjectName < y.ProjectName ? -1 : 1;
+        return x.ProjectName.toLowerCase() < y.ProjectName.toLowerCase() ?
+                 -1 : 1;
     });
 
     this.listField.destroy();
