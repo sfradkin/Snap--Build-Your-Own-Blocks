@@ -207,7 +207,13 @@ SpriteMorph.prototype.initBlocks = function () {
         toneSimpleSynth: {
           type: 'toneblock',
           category: 'tone',
-          spec: 'play notes in synth %c'
+          spec: 'play notes in simple synth %c'
+        },
+
+        toneSynthProps: {
+          type: 'toneblock',
+          category: 'tone',
+          spec: 'set synth property %toneSP to %s'
         },
 
         toneFx: {
@@ -1781,6 +1787,7 @@ SpriteMorph.prototype.blockTemplates = function (category) {
     }
     if (cat === 'tone') {
       blocks.push(block('toneSimpleSynth'));
+      blocks.push(block('toneSynthProps'));
       blocks.push(block('toneFx'));
       blocks.push(block('toneNote'));
       blocks.push(block('toneSleep'));

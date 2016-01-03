@@ -183,6 +183,28 @@ ToneBlockMorph.prototype.reactToTemplateCopy = function() {
   this.id = '' + (Math.random() * (100 - 0) + 0);
 };
 
+ToneInputSlotMorph.prototype = new InputSlotMorph();
+ToneInputSlotMorph.prototype.constructor = ToneInputSlotMorph;
+ToneInputSlotMorph.uber = InputSlotMorph.prototype;
+
+function ToneInputSlotMorph(text, isNumeric, choiceDict, isReadOnly) {
+    this.init(text, isNumeric, choiceDict, isReadOnly);
+};
+
+ToneInputSlotMorph.prototype.init = function(text, isNumeric, choiceDict, isReadOnly) {
+    ToneInputSlotMorph.uber.init.call(this, text, isNumeric, choiceDict, isReadOnly);
+};
+
+ToneInputSlotMorph.prototype.getSynthProps = function() {
+  // this should check the synth type and return a dynamic dictionary based
+  // on the type, but right now we only have SimpleSynth
+
+  return {
+          'oscillatorType': 'oscillatorType',
+          'detune': 'detune'
+         };
+};
+
 Process.prototype.toneFx = function(fxType, body) {
   console.log('id of fx node: ', this.context.expression.id);
   console.log('fxType: ', fxType, ' body: ', body);
@@ -245,7 +267,7 @@ Process.prototype.toneSimpleSynth = function(body) {
 
   if (!existingSynth) {
 
-    var synth = new Tone.MonoSynth({type: 'sine'});
+    var synth = new Tone.MonoSynth({oscillator: {type: 'sine'}});
 
     if (outerContextObj) {
       if (outerContextObj.type === 'fx') {
@@ -284,7 +306,7 @@ Process.prototype.toneSimpleSynth = function(body) {
   }
 
   var outer = this.context.outerContext;
-  outer.expression = this.context.expression.id;
+  outer.expression = {id: this.context.expression.id, type: 'synth'};
   this.popContext();
       if (body) {
           this.pushContext(body.blockSequence(), outer);
@@ -294,7 +316,7 @@ Process.prototype.toneSimpleSynth = function(body) {
 };
 
 Process.prototype.toneNote = function(note, time) {
-  var outerId = this.context.outerContext.expression;
+  var outerId = this.context.outerContext.expression.id;
   console.log('in Process.toneNote function, outerId = ' + outerId);
 
   scheduleNote(outerId, {note: note, time: time}, true);  // when processing the actual note block we send a boolean true to store for later
@@ -303,10 +325,24 @@ Process.prototype.toneNote = function(note, time) {
 };
 
 Process.prototype.toneSleep = function(time) {
-  var outerId = this.context.outerContext.expression;
+  var outerId = this.context.outerContext.expression.id;
   console.log('in Process.toneSleep function, outerId = ' + outerId);
 
   scheduleNote(outerId, {note: 'sleep', time: time}, true);  // when processing the actual note block we send a boolean true to store for later
   return null;
 
 };
+
+Process.prototype.toneSynthProps = function(propType, propValue) {
+  if (this.context.outerContext.expression.type === 'synth') {
+    var curSynthId = this.context.outerContext.expression.id;
+    var existingSynth = toneMap[curSynthId];
+    if (existingSynth) {
+      if (propType === 'oscillatorType') {
+        existingSynth.synth.oscillator.type = propValue;
+      } else if (propType === 'detune') {
+        existingSynth.synth.detune.value = propValue;
+      }
+    }
+  }
+}

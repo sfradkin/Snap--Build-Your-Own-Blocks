@@ -1445,6 +1445,14 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
             );
             part.setContents('reverb');
             break;
+        case '%toneSP':
+            part = new ToneInputSlotMorph(
+              null,
+              false,
+              'getSynthProps',
+              true
+            );
+            break;
         default:
             nop();
         }
