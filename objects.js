@@ -207,7 +207,7 @@ SpriteMorph.prototype.initBlocks = function () {
         toneSimpleSynth: {
           type: 'toneblock',
           category: 'tone',
-          spec: 'play notes in simple synth %c'
+          spec: 'use synth %toneSynths %c'
         },
 
         toneSynthProps: {

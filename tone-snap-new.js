@@ -19,6 +19,11 @@ var addFxToToneMap = function(toneFx) {
 
 };
 
+var synthSettings = {
+  monosynth: 'set detune to %s %br set oscillator type to %toneOscType',
+  fmsynth: 'set modulation index to %s'
+};
+
 var scheduleNote = function(id, noteObj, store) {
   var existingSynth = toneMap[id];
 
@@ -156,6 +161,7 @@ ToneBlockMorph.uber = CommandBlockMorph.prototype;
 
 function ToneBlockMorph() {
     this.init();
+    this.synthType = '';
 };
 
 ToneBlockMorph.prototype.init = function() {
@@ -183,6 +189,15 @@ ToneBlockMorph.prototype.reactToTemplateCopy = function() {
   this.id = '' + (Math.random() * (100 - 0) + 0);
 };
 
+ToneBlockMorph.prototype.snap = function() {
+  ToneBlockMorph.uber.snap.call(this);
+
+  if (this.selector === 'toneSynthProps') {
+    console.log('parent synth block type is: ', this.parent.parent.children[2].children[0].text);
+    this.setSpec(synthSettings[this.parent.parent.children[2].children[0].text]);
+  }
+};
+
 ToneInputSlotMorph.prototype = new InputSlotMorph();
 ToneInputSlotMorph.prototype.constructor = ToneInputSlotMorph;
 ToneInputSlotMorph.uber = InputSlotMorph.prototype;
@@ -203,6 +218,27 @@ ToneInputSlotMorph.prototype.getSynthProps = function() {
           'oscillatorType': 'oscillatorType',
           'detune': 'detune'
          };
+};
+
+ToneInputSlotMorph.prototype.getOscTypes = function() {
+  //  square, triangle, sawtooth, pulse or pwm
+
+  return {
+          'sine': 'sine',
+          'square': 'square',
+          'triangle': 'triangle',
+          'sawtooth': 'sawtooth',
+          'pulse': 'pulse',
+          'pwm': 'pwm'
+         };
+};
+
+ToneInputSlotMorph.prototype.getNoiseTypes = function() {
+  return {
+    'white': 'white',
+    'brown': 'brown',
+    'pink': 'pink'
+  };
 };
 
 Process.prototype.toneFx = function(fxType, body) {
@@ -254,11 +290,14 @@ Process.prototype.toneFx = function(fxType, body) {
 
 };
 
-Process.prototype.toneSimpleSynth = function(body) {
+Process.prototype.toneSimpleSynth = function(type, body) {
 
   console.log('id of simple synth: ', this.context.expression.id);
 
   console.log('outer context: ', this.context.outerContext.expression);
+
+  this.synthType = type;
+
   var outerContextObj = this.context.outerContext.expression;
 
   // create the synth object here and store it in the toneMap
@@ -267,7 +306,15 @@ Process.prototype.toneSimpleSynth = function(body) {
 
   if (!existingSynth) {
 
-    var synth = new Tone.MonoSynth({oscillator: {type: 'sine'}});
+    var synth;
+
+    if (type === 'monosynth') {
+      synth = new Tone.MonoSynth({oscillator: {type: 'sine'}});
+    } else if (type === 'fmsynth') {
+      synth = new Tone.FMSynth();
+    } else {
+      console.log('unknown synth type: ', type);
+    }
 
     if (outerContextObj) {
       if (outerContextObj.type === 'fx') {
@@ -280,7 +327,12 @@ Process.prototype.toneSimpleSynth = function(body) {
       synth.toMaster();
     }
 
-    synth.oscillator.sync();
+    if (type === 'monosynth') {
+      synth.oscillator.sync();
+    } else if (type === 'fmsynth') {
+      synth.carrier.oscillator.sync();
+      synth.modulator.oscillator.sync();
+    }
 
     var toneSynth = new ToneSynth(this.context.expression.id, synth);
     toneSynth.transportTimeStart = Tone.Transport.ticks;

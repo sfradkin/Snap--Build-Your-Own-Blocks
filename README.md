@@ -23,15 +23,21 @@ Any synth/fx c-blocks that also have green flag hats on them to respond to the
 green flag button press will all redefine upon pressing the green flag button.
 
 Things up next to implement:
-- Make synth property block more dynamic so that choices differ based on synth
-  and values of properties are dynamic based on the property
+- Refactor code to provide extensions to existing Snap files rather than
+  directly modifying the core Snap files
+- Refactor to use a Part object for each loop instead of scheduling everything
+  to the Transport Timeline
+- Add new live loop block to loop rather than implicitly looping synth block
+- Fix implementation of synth property block to understand how to process the
+  dynamic properties
+- Make synth property block auto-change when synth type is changed
 - Fix adding/removing FX blocks without stopping, currently does not connect/
   disconnect correctly
 - Modify re-evaluation of blocks to ensure current loops fully end before
   starting newly evaluated blocks
-- Ability to change the type of synth
+- Add more synths from Tone core
+- Create new synths
 - Add ability to modify fx parameters
-- Ability to modify parameters of synths
 - Chords
 - Scales
 - Looping over lists of notes

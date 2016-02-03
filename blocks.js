@@ -1453,6 +1453,33 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
               true
             );
             break;
+        case '%toneOscType':
+            part = new ToneInputSlotMorph(
+              null,
+              false,
+              'getOscTypes',
+              true
+            );
+            break;
+        case '%toneNoiseType':
+            part = new ToneInputSlotMorph(
+              null,
+              false,
+              'getNoiseTypes',
+              true
+            );
+            break;
+        case '%toneSynths':
+          part = new InputSlotMorph(
+              null,
+              false,
+              {   monosynth : 'monosynth',
+                  fmsynth: 'fmsynth'
+              },
+              true
+          );
+          part.setContents('monosynth');
+          break;
         default:
             nop();
         }
