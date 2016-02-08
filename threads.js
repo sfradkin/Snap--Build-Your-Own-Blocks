@@ -9,7 +9,7 @@
     written by Jens Mönig
     jens@moenig.org
 
-    Copyright (C) 2015 by Jens Mönig
+    Copyright (C) 2016 by Jens Mönig
 
     This file is part of Snap!.
 
@@ -83,7 +83,7 @@ ArgLabelMorph, localize, XML_Element, hex_sha512*/
 
 // Global stuff ////////////////////////////////////////////////////////
 
-modules.threads = '2015-December-22';
+modules.threads = '2016-January-19';
 
 var ThreadManager;
 var Process;
@@ -204,11 +204,7 @@ ThreadManager.prototype.toggleProcess = function (block) {
     if (active) {
         active.stop();
     } else {
-        if (block.isTone && block.isTone()) {  // if the block is a ToneBlock, then we need to set the block complete callback
-          return this.startProcess(block, false, false, createAndPlaySynth);
-        } else {
-          return this.startProcess(block, null, null, null, true);
-        }
+        return this.startProcess(block, null, null, null, true);
     }
 };
 
@@ -219,7 +215,6 @@ ThreadManager.prototype.startProcess = function (
     callback,
     isClicked
 ) {
-    console.log('in thread manager.startProcess');
     var active = this.findProcess(block),
         top = block.topBlock(),
         newProc;
@@ -230,30 +225,6 @@ ThreadManager.prototype.startProcess = function (
         active.stop();
         this.removeTerminatedProcesses();
     }
-
-    // before we start a process for a set of Tone blocks, check to see if
-    // the Tone.Transport is started
-    // if it's not started, then start it up
-    // if it's already started, then don't do anything
-    console.log('block is: ', block);
-    if (block.children.length > 0) {
-      hasToneChild = block.children.some(function(child) {
-        if (child.selector === 'toneSimpleSynth') {
-          return true;
-        }
-      });
-    }
-
-    block.hasToneChild = hasToneChild;
-
-    if ((block.isTone && block.isTone()) || hasToneChild) {
-      if (Tone.Transport.state === 'stopped') {
-        console.log('starting transport');
-        Tone.Transport.start();
-      }
-      console.log('transport state ' + Tone.Transport.state);
-    }
-
     newProc = new Process(block.topBlock(), callback);
     newProc.exportResult = exportResult;
     newProc.isClicked = isClicked || false;
@@ -361,24 +332,6 @@ ThreadManager.prototype.removeTerminatedProcesses = function () {
                         );
                     }
                 }
-            } else if (proc.topBlock instanceof ToneBlockMorph || proc.topBlock.hasToneChild) {
-              if (proc.onComplete instanceof Function) {
-                  proc.onComplete(proc.homeContext.expression); // this passes in the ToneBlock generated id to onComplete
-              } else {
-                  if (proc.homeContext.inputs[0] instanceof List) {
-                      proc.topBlock.showBubble(
-                          new ListWatcherMorph(
-                              proc.homeContext.inputs[0]
-                          ),
-                          proc.exportResult
-                      );
-                  } else {
-                      proc.topBlock.showBubble(
-                          proc.homeContext.inputs[0],
-                          proc.exportResult
-                      );
-                  }
-              }
             }
         } else {
             remaining.push(proc);
@@ -916,6 +869,10 @@ Process.prototype.handleError = function (error, element) {
     );
 };
 
+Process.prototype.errorObsolete = function () {
+    throw new Error('a custom block definition is missing');
+};
+
 // Process Lambda primitives
 
 Process.prototype.reify = function (topBlock, parameterNames, isCustomBlock) {
@@ -1093,7 +1050,7 @@ Process.prototype.fork = function (context, args) {
     var proc = new Process(),
         stage = this.homeContext.receiver.parentThatIsA(StageMorph);
     proc.initializeFor(context, args);
-    proc.pushContext('doYield');
+    // proc.pushContext('doYield');
     stage.threads.processes.push(proc);
 };
 
@@ -1617,7 +1574,6 @@ Process.prototype.reportListContainsItem = function (list, element) {
 // Process conditionals primitives
 
 Process.prototype.doIf = function () {
-  console.log("in doIf");
     var args = this.context.inputs,
         outer = this.context.outerContext, // for tail call elimination
         isCustomBlock = this.context.isCustomBlock;
@@ -3023,7 +2979,6 @@ Process.prototype.doSetTempo = function (bpm) {
 };
 
 Process.prototype.doPlayNote = function (pitch, beats) {
-  console.log("in doPlayNote");
     var tempo = this.reportTempo();
     this.doPlayNoteForSecs(
         parseFloat(pitch || '0'),
@@ -3093,8 +3048,6 @@ Process.prototype.reportStackSize = function () {
 Process.prototype.reportFrameCount = function () {
     return this.frameCount;
 };
-
-
 
 // Context /////////////////////////////////////////////////////////////
 

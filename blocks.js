@@ -9,7 +9,7 @@
     written by Jens Mönig
     jens@moenig.org
 
-    Copyright (C) 2015 by Jens Mönig
+    Copyright (C) 2016 by Jens Mönig
 
     This file is part of Snap!.
 
@@ -156,7 +156,7 @@ DialogBoxMorph, BlockInputFragmentMorph, PrototypeHatBlockMorph, Costume*/
 
 // Global stuff ////////////////////////////////////////////////////////
 
-modules.blocks = '2015-December-22';
+modules.blocks = '2016-January-22';
 
 var SyntaxElementMorph;
 var BlockMorph;
@@ -1156,6 +1156,7 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
                 false,
                 {
                     abs : ['abs'],
+                    ceiling : ['ceiling'],
                     floor : ['floor'],
                     sqrt : ['sqrt'],
                     sin : ['sin'],
@@ -1430,56 +1431,6 @@ SyntaxElementMorph.prototype.labelPart = function (spec) {
                     new Point() : this.embossing;
             part.drawNew();
             break;
-        case '%tonefx':
-            part = new InputSlotMorph(
-                null,
-                false,
-                {   reverb : 'reverb',
-                    //tremolo : 'tremolo',
-                    vibrato : 'vibrato',
-                    bitcrusher : 'bitcrusher',
-                    distortion : 'distortion',
-                    phaser : 'phaser'
-                },
-                true
-            );
-            part.setContents('reverb');
-            break;
-        case '%toneSP':
-            part = new ToneInputSlotMorph(
-              null,
-              false,
-              'getSynthProps',
-              true
-            );
-            break;
-        case '%toneOscType':
-            part = new ToneInputSlotMorph(
-              null,
-              false,
-              'getOscTypes',
-              true
-            );
-            break;
-        case '%toneNoiseType':
-            part = new ToneInputSlotMorph(
-              null,
-              false,
-              'getNoiseTypes',
-              true
-            );
-            break;
-        case '%toneSynths':
-          part = new InputSlotMorph(
-              null,
-              false,
-              {   monosynth : 'monosynth',
-                  fmsynth: 'fmsynth'
-              },
-              true
-          );
-          part.setContents('monosynth');
-          break;
         default:
             nop();
         }
@@ -3332,7 +3283,7 @@ BlockMorph.prototype.activeProcess = function () {
     return null;
 };
 
-// BlockMorph thumbnail
+// BlockMorph thumbnail and script pic
 
 BlockMorph.prototype.thumbnail = function (scale, clipWidth) {
     var nb = this.nextBlock(),
@@ -3372,6 +3323,31 @@ BlockMorph.prototype.thumbnail = function (scale, clipWidth) {
     }
     if (nb) {nb.isVisible = true; }
     return trgt;
+};
+
+BlockMorph.prototype.scriptPic = function () {
+    // answer a canvas image that also includes comments
+    var scr = this.fullImage(),
+        fb = this.stackFullBounds(),
+        pic = newCanvas(fb.extent()),
+        ctx = pic.getContext('2d');
+    this.allComments().forEach(function (comment) {
+        var anchor = comment.anchor;
+        if (anchor) {
+            ctx.drawImage(
+                anchor.image,
+                anchor.left() - fb.left(),
+                anchor.top() - fb.top()
+            );
+        }
+        ctx.drawImage(
+            comment.fullImageClassic(),
+            comment.left() - fb.left(),
+            comment.top() - fb.top()
+        );
+    });
+    ctx.drawImage(scr, 0, 0);
+    return pic;
 };
 
 // BlockMorph dragging and dropping
@@ -3455,6 +3431,22 @@ BlockMorph.prototype.stackHeight = function () {
             function (comment) {return comment.bottom(); }
         )) || this.bottom();
     return Math.max(fb.bottom(), commentsBottom) - fb.top();
+};
+
+BlockMorph.prototype.stackFullBounds = function () {
+    var fb = this.fullBounds();
+    this.allComments().forEach(function (comment) {
+        fb.mergeWith(comment.bounds);
+    });
+    return fb;
+};
+
+BlockMorph.prototype.stackWidth = function () {
+    var fb = this.fullBounds(),
+        commentsRight = Math.max(this.allComments().map(
+            function (comment) {return comment.right(); }
+        )) || this.right();
+    return Math.max(fb.right(), commentsRight) - fb.left();
 };
 
 BlockMorph.prototype.snap = function () {
@@ -4584,6 +4576,7 @@ ReporterBlockMorph.prototype.ExportResultPic = function () {
 
 ReporterBlockMorph.prototype.userDestroy = function () {
     // make sure to restore default slot of parent block
+    this.topBlock().fullChanged();
     this.prepareToBeGrabbed(this.world().hand);
     this.destroy();
 };
@@ -5603,6 +5596,20 @@ ScriptsMorph.prototype.clearDropHistory = function () {
     this.lastDropTarget = null;
     this.lastPreservedBlocks = null;
     this.lastNextBlock = null;
+};
+
+// ScriptsMorph sorting blocks and comments
+
+ScriptsMorph.prototype.sortedElements = function () {
+    // return all scripts and unattached comments
+    var scripts = this.children.filter(function (each) {
+        return each instanceof CommentMorph ? !each.block : true;
+    });
+    scripts.sort(function (a, b) {
+        // make sure the prototype hat block always stays on top
+        return a instanceof PrototypeHatBlockMorph ? 0 : a.top() - b.top();
+    });
+    return scripts;
 };
 
 // ScriptsMorph blocks layout fix
@@ -7289,7 +7296,8 @@ InputSlotMorph.prototype.fixLayout = function () {
                 + this.typeInPadding * 2,
             contents.rawHeight ? // single vs. multi-line contents
                         contents.rawHeight() + arrowWidth
-                                : contents.height() / 1.2 + arrowWidth,
+                                : fontHeight(contents.fontSize) / 1.3
+                                    + arrowWidth,
             this.minWidth // for text-type slots
         );
     }

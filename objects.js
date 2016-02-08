@@ -164,8 +164,7 @@ SpriteMorph.prototype.categories =
         'pen',
         'variables',
         'lists',
-        'other',
-        'tone'
+        'other'
     ];
 
 SpriteMorph.prototype.blockColor = {
@@ -178,8 +177,7 @@ SpriteMorph.prototype.blockColor = {
     operators : new Color(98, 194, 19),
     variables : new Color(243, 118, 29),
     lists : new Color(217, 77, 17),
-    other: new Color(150, 150, 150),
-    tone: new Color(212, 98, 255)
+    other: new Color(150, 150, 150)
 };
 
 SpriteMorph.prototype.paletteColor = new Color(55, 55, 55);
@@ -203,40 +201,6 @@ SpriteMorph.prototype.bubbleMaxTextWidth = 130;
 
 SpriteMorph.prototype.initBlocks = function () {
     SpriteMorph.prototype.blocks = {
-
-        toneSimpleSynth: {
-          type: 'toneblock',
-          category: 'tone',
-          spec: 'use synth %toneSynths %c'
-        },
-
-        toneSynthProps: {
-          type: 'toneblock',
-          category: 'tone',
-          spec: 'set synth property %toneSP to %s'
-        },
-
-        toneFx: {
-          type: 'toneblock',
-          category: 'tone',
-          spec: 'add fx %tonefx for %c'
-        },
-
-        toneNote: {
-          only: SpriteMorph,
-          type: 'command',
-          category: 'tone',
-          spec: 'oscillate note %s for time %s',
-          defaults: ['c3', '4n']
-        },
-
-        toneSleep: {
-          only: SpriteMorph,
-          type: 'command',
-          category: 'tone',
-          spec: 'silence for time %s',
-          defaults: ['4n']
-        },
 
         // Motion
         forward: {
@@ -1660,7 +1624,7 @@ SpriteMorph.prototype.blockForSelector = function (selector, setDefaults) {
     migration = this.blockMigrations[selector];
     info = this.blocks[migration ? migration.selector : selector];
     if (!info) {return null; }
-    block = info.type === 'toneblock' ? new ToneBlockMorph() : info.type === 'command' ? new CommandBlockMorph()
+    block = info.type === 'command' ? new CommandBlockMorph()
         : info.type === 'hat' ? new HatBlockMorph()
             : info.type === 'ring' ? new RingMorph()
                 : new ReporterBlockMorph(info.type === 'predicate');
@@ -1785,13 +1749,8 @@ SpriteMorph.prototype.blockTemplates = function (category) {
             }
         }
     }
-    if (cat === 'tone') {
-      blocks.push(block('toneSimpleSynth'));
-      blocks.push(block('toneSynthProps'));
-      blocks.push(block('toneFx'));
-      blocks.push(block('toneNote'));
-      blocks.push(block('toneSleep'));
-    } else if (cat === 'motion') {
+
+    if (cat === 'motion') {
 
         blocks.push(block('forward'));
         blocks.push(block('turn'));
@@ -5350,8 +5309,7 @@ StageMorph.prototype.fireGreenFlagEvent = function () {
     var procs = [],
         hats = [],
         ide = this.parentThatIsA(IDE_Morph),
-        myself = this,
-        hasToneChild = false;
+        myself = this;
 
     this.children.concat(this).forEach(function (morph) {
         if (morph instanceof SpriteMorph || morph instanceof StageMorph) {
@@ -5359,31 +5317,10 @@ StageMorph.prototype.fireGreenFlagEvent = function () {
         }
     });
     hats.forEach(function (block) {
-
-      if (block.children.length > 0) {
-        hasToneChild = block.children.some(function(child) {
-          if (child.selector === 'toneSimpleSynth') {
-            return true;
-          }
-        });
-      }
-
-      block.hasToneChild = hasToneChild;
-
-      if (hasToneChild) {
-        console.log('green flag event, has tone child, start process');
-        procs.push(myself.threads.startProcess(
-            block,
-            myself.isThreadSafe,
-            false,
-            createAndPlaySynth
-        ));
-      } else {
         procs.push(myself.threads.startProcess(
             block,
             myself.isThreadSafe
         ));
-      }
     });
     if (ide) {
         ide.controlBar.pauseButton.refresh();
@@ -5397,7 +5334,6 @@ StageMorph.prototype.fireStopAllEvent = function () {
     this.keysPressed = {};
     this.threads.stopAll();
     this.stopAllActiveSounds();
-    stopTone(); // stopping everything, so we need to call our stopTone() function to clean things up
     this.children.forEach(function (morph) {
         if (morph.stopTalking) {
             morph.stopTalking();
