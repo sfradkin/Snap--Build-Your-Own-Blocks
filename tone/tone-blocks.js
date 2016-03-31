@@ -60,6 +60,16 @@
           );
           part.setContents('monosynth');
           break;
+        case '%toneSamples':
+          part = new InputSlotMorph(
+              null,
+              false,
+              {   'bass drum' : 'bd'
+              },
+              true
+          );
+          part.setContents('bd');
+          break;
         default:
           part = oldLabelPart.call(this, spec);
       }

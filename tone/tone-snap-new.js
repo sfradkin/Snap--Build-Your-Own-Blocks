@@ -1,5 +1,93 @@
 var toneMap = {};
 var toneFxMap = {};
+var tonePlayerMap = {};
+var musicParts = {};
+var samples = {};
+var toClean = [];
+
+var sweepClean = function() {
+  for (var i = 0; i < toClean.length; i ++) {
+    var part = musicParts[toClean[i]];
+    if (part.tonePart.state === 'stopped') {
+      part.tonePart.dispose();
+      delete musicParts[toClean[i]];
+      toClean.splice(i, 1);
+    }
+  }
+};
+
+Tone.Transport.scheduleRepeat(sweepClean, 5, 0);
+
+var snapMusicBlocks = ['musicPlay', 'musicRest', 'liveLoop'];
+
+var cleanUpParts = function() {
+  Object.keys(musicParts).every(function(key) {
+    var part = musicParts[key];
+    if (part.tonePart.state === 'started') {
+      part.stop();
+      toClean.push(part.id);
+    }
+  });
+};
+
+var findSnapMusicBlock = function(block) {
+  if (snapMusicBlocks.some(function(item) {
+    return item === block.selector;
+  })) {
+    return true;
+  } else {
+    if (block.children && block.children.length > 0) {
+      return block.children.some(function(child) {
+        return findSnapMusicBlock(child);
+      });
+    } else {
+      return false;
+    }
+  }
+};
+
+var initMusicPart = function() {
+  //this.homeContext.expression = generateId();
+  var partId = generateId();
+
+  // create a new MusicPart
+  var musicPart = new MusicPart(partId);
+  addPart(musicPart);
+
+  console.log('initializing Part: ', partId);
+
+  return partId;
+};
+
+var musicEnd = function(partId) {
+  musicPart = musicParts[partId];
+  console.log('starting Part: ', partId);
+  musicPart.start(0);
+};
+
+var loopEnd = function(partId) {
+  musicPart = musicParts[partId];
+  musicPart.loopEnd();
+};
+
+var loadSample = function(sampleName) {
+  var aSample = samples[sampleName];
+  if (!aSample) {
+    aSample = new Tone.Player('tone/samples/' + sampleName + '.wav');
+    aSample.toMaster();
+    samples[sampleName] = aSample;
+  }
+
+  return aSample;
+};
+
+var addPart = function(musicPart) {
+  var existingPart = musicParts[musicPart.id];
+
+  if (!existingPart) {
+    musicParts[musicPart.id] = musicPart;
+  }
+};
 
 var addSynthToToneMap = function(toneSynth) {
   var existingSynth = toneMap[toneSynth.id];
@@ -19,11 +107,70 @@ var addFxToToneMap = function(toneFx) {
 
 };
 
+var addPlayerToToneMap = function(tonePlayer) {
+  var existingPlayer = tonePlayerMap[tonePlayer.id];
+
+  if (!existingPlayer) {
+    tonePlayerMap[tonePlayer.id] = tonePlayer;
+  }
+
+};
+
+/* generates a quick somewhat random id */
+var generateId = function() {
+  return '' + (Math.random() * (100 - 0) + 0);
+};
+
+/* callback function that Tone.Part will call to play an event */
+var playEvents = function(time, event) {
+  /*
+  this.type = type;
+  this.outputId = outputId;
+  this.play = play;
+  this.duration = duration;
+  */
+
+  if (event.type === 'NOTE') {
+    var synth = toneMap[event.outputId];
+    synth.synth.triggerAttackRelease(event.play, event.duration);
+  } else if (event.type === 'SAMPLE') {
+    var aSample = loadSample(event.play);
+    aSample.start();
+  }
+
+};
+
+var generateDefaultSynth = function() {
+
+  var type = 'monosynth';
+  var synth = new Tone.MonoSynth({oscillator: {type: 'sine'}});
+
+  synth.toMaster();
+  synth.oscillator.sync();
+
+  var toneSynth = new ToneSynth(generateId(), synth);
+  toneSynth.type = type;
+
+  addSynthToToneMap(toneSynth);
+
+  return toneSynth;
+};
+
+var defaultSynth = generateDefaultSynth();
+
+var isTransportRunning = function() {
+  if (Tone.Transport.state === 'stopped') {
+    console.log('starting transport');
+    Tone.Transport.start();
+  }
+};
+
 var synthSettings = {
   monosynth: 'set detune to %s %br set oscillator type to %toneOscType',
   fmsynth: 'set modulation index to %s'
 };
 
+/* DEPRECATED */
 var scheduleNote = function(id, noteObj, store) {
   var existingSynth = toneMap[id];
 
@@ -60,6 +207,7 @@ var scheduleNote = function(id, noteObj, store) {
   }
 };
 
+/* DEPRECATED */
 var createAndPlaySynth = function(synthid) {
 
   console.log('at end of synth block: ', synthid);
@@ -78,6 +226,7 @@ var createAndPlaySynth = function(synthid) {
 
 };
 
+/* WILL NEED TO ADD IN DESTROYING THE PARTS */
 var stopTone = function() {
   console.log('in stopTone');
 
@@ -101,11 +250,28 @@ var stopTone = function() {
     fxNode.fxNode.dispose();
   });
 
+  console.log('cleaning up players');
+  keys = Object.keys(tonePlayerMap);
+  keys.forEach(function(key) {
+    player = tonePlayerMap[key];
+    player.player.dispose();
+  });
+
+  console.log('cleaning up music parts');
+  keys = Object.keys(musicParts);
+  keys.forEach(function(key) {
+    musicpart = musicParts[key];
+    musicpart.tonePart.dispose();
+  });
+
   toneMap = {};
   toneFxMap = {};
+  tonePlayerMap = {};
+  musicParts = {};
   Tone.Transport.cancel();
 };
 
+/* DEPRECATED */
 var doToneRecordedMode = function() {
   var synthObj, notes;
 
@@ -123,10 +289,79 @@ var doToneRecordedMode = function() {
     });
 };
 
+MusicPart.prototype = new Object();
+function MusicPart(id) {
+  this.id = id;
+  this.offset = 0;
+  this.tonePart = new Tone.Part(playEvents);
+
+  /* calculate the correct offset for when to invoke this event
+     and add to the Tone.Part */
+  this.add = function(event) {
+    if (event.type === 'NOTE') {
+      // this note should be scheduled to start at the end of the duration of
+      // the previously scheduled event
+
+      this.tonePart.add(this.offset + 'i', event);
+
+      // recalc the offset
+      this.offset += this.tonePart.toTicks(event.duration);
+
+
+    } else if (event.type === 'REST') {
+      // a rest does not trigger any sounds, but it _does_ update the calculated
+      // offset so that the next event can be scheduled correctly
+
+      this.tonePart.add(this.offset + 'i', event);
+
+      // recalc the offset
+      this.offset += this.tonePart.toTicks(event.duration);
+
+    } else if (event.type === 'SAMPLE') {
+      // samples are played through Tone.Player
+      // the duration of a sample can be retrieved via Tone.Player.buffer.duration
+
+      this.tonePart.add(this.offset + 'i', event);
+
+      // recalc the offset
+      this.offset += this.tonePart.toTicks(event.duration);
+    }
+  };
+
+  this.start = function(time) {
+    isTransportRunning();
+    this.tonePart.start(time);
+  };
+
+  this.stop = function() {
+    this.tonePart.stop(this.offset);
+  };
+
+  this.loop = function() {
+    this.tonePart.loop = true;
+    this.tonePart.loopStart = 0;
+  };
+
+  this.loopEnd = function() {
+    this.tonePart.loopEnd = this.offset;
+  };
+
+};
+
+MusicEvent.prototype = new Object();
+function MusicEvent(type, outputId, play, duration) {
+  this.type = type;
+  this.outputId = outputId;
+  this.play = play;
+  this.duration = duration;
+};
+
 ToneSynth.prototype = new Object();
 function ToneSynth(id, synth) {
   this.id = id;
   this.synth = synth;
+
+  /* deprecate begin */
   this.notes = [];
   this.offSet = 0;
   this.transportTimeStart = 0;  // The transport time this synth was started at
@@ -134,9 +369,13 @@ function ToneSynth(id, synth) {
   this.loopTime = 0;  // The time it takes to make a loop of the notes defined in this synth
   this.offSetTicks = 0;
   this.noteEvents = [];
+  /* deprecate end */
+
+  this.type = '';
 
   var thisSynth = this;
 
+  /* DEPRECATED */
   this.synthScheduleCallback = function(time) {
 
     console.log('--------- synthScheduleCallback fired at ', Tone.Transport.now());
@@ -155,6 +394,9 @@ function ToneFx(id, fxNode, fxType) {
   this.fxType = fxType;
 };
 
+/* DECIDE WHETHER OR NOT WE NEED THE CUSTOM TONEBLOCKMORPH
+   MIGHT WANT TO KEEP IT AROUND, BUT WE MAY NOT NEED ALL OF
+   THE CURRENT FUNCTIONALITY */
 ToneBlockMorph.prototype = new CommandBlockMorph();
 ToneBlockMorph.prototype.constructor = ToneBlockMorph;
 ToneBlockMorph.uber = CommandBlockMorph.prototype;
@@ -290,6 +532,7 @@ Process.prototype.toneFx = function(fxType, body) {
 
 };
 
+/* THINK ABOUT REWRITING THIS TO NOT BE A C-BLOCK, CALL IT "USE SYNTH" */
 Process.prototype.toneSimpleSynth = function(type, body) {
 
   console.log('id of simple synth: ', this.context.expression.id);
@@ -367,6 +610,129 @@ Process.prototype.toneSimpleSynth = function(type, body) {
 
 };
 
+Process.prototype.liveLoop = function(body) {
+
+  var musicPart;
+
+  if (this.homeContext.expression) {
+    musicPart = musicParts[this.homeContext.expression.curPartId];
+  }
+
+  musicPart.loop();
+
+  this.popContext();
+      if (body) {
+          this.pushContext(body.blockSequence(), this.context.outerContext);
+      }
+  //this.pushContext();
+  this.pushContext('loopEnd');
+};
+
+Process.prototype.musicPlay = function(note, duration) {
+
+  // THE OUTER CONTEXT IS USED RIGHT NOW ONLY FOR SYNTH C-BLOCKS OR
+  // FX C-BLOCKS SO THAT WE UNDERSTAND THE hierarchy
+
+  // THE HOMECONTEXT.EXPRESSION SHOULD ALWAYS BE POPULATED WITH THE MUSICPART OBJECT
+  // FOR THIS SET OF BLOCKS
+
+  var outerId;
+  if (this.context.outerContext.expression) {
+    outerId = this.context.outerContext.expression.id;
+  }
+
+  var musicPart;
+
+  // if outer id is null, then we're not within a synth or fx c-block
+  if (!outerId) {
+
+      if (this.homeContext.expression) {
+        musicPart = musicParts[this.homeContext.expression.curPartId];
+      }
+
+    // since we didn't have an outer id which indicates either a synth or fx this is within,
+    // grab the id of the default synth to use as the synth to sound the note
+    outerId = defaultSynth.id;
+
+  } else {
+    // there's an outer id which means that this block is within a synth c-block or an fx c-block
+    // if we're in a synth c-block, then the outer id should go with the note
+    // if we're in an fx c-block, things get more complex
+    // solve the fx issue later, but we probably need to clone the default synth and run it through the
+    // fx node, then store the synth id somewhere so music play blocks further down the line have the correct
+    // synth id
+
+    if (this.context.outerContext.expression.type === 'fx') {
+      // don't do anything now
+    }
+
+
+      if (this.homeContext.expression) {
+        musicPart = musicParts[this.homeContext.expression.curPartId];
+      }
+
+  }
+
+  var event = new MusicEvent('NOTE', outerId, note, duration);
+
+  musicPart.add(event); // the MusicPart will figure out the correct time to invoke the note event
+  console.log('added note event: ', event);
+};
+
+Process.prototype.musicRest = function(duration) {
+
+  // THE OUTER CONTEXT IS USED RIGHT NOW ONLY FOR SYNTH C-BLOCKS OR
+  // FX C-BLOCKS SO THAT WE UNDERSTAND THE hierarchy
+
+  // THE HOMECONTEXT.EXPRESSION SHOULD ALWAYS BE POPULATED WITH THE MUSICPART OBJECT
+  // FOR THIS SET OF BLOCKS
+
+  var outerId;
+  if (this.context.outerContext.expression) {
+    outerId = this.context.outerContext.expression.id;
+  }
+
+  var musicPart;
+
+  // if outer id is null, then we're not within a synth or fx c-block
+  if (!outerId) {
+
+      if (this.homeContext.expression) {
+        musicPart = musicParts[this.homeContext.expression.curPartId];
+      }
+    // since we didn't have an outer id which indicates either a synth or fx this is within,
+    // grab the id of the default synth to use as the synth to sound the note
+    outerId = defaultSynth.id;
+
+  } else {
+    // there's an outer id which means that this block is within a synth c-block or an fx c-block
+    // if we're in a synth c-block, then the outer id should go with the note
+    // if we're in an fx c-block, things get more complex
+    // solve the fx issue later, but we probably need to clone the default synth and run it through the
+    // fx node, then store the synth id somewhere so music play blocks further down the line have the correct
+    // synth id
+
+    if (this.context.outerContext.expression.type === 'fx') {
+      // don't do anything now
+    }
+
+
+      if (this.homeContext.expression) {
+        musicPart = musicParts[this.homeContext.expression.curPartId];
+      }
+
+
+  }
+
+  var event = new MusicEvent('REST', outerId, null, duration);
+
+  musicPart.add(event); // the MusicPart will figure out the correct time to invoke the note event
+  console.log('added rest event: ', event);
+
+};
+
+
+/* DEPRECATED */
 Process.prototype.toneNote = function(note, time) {
   var outerId = this.context.outerContext.expression.id;
   console.log('in Process.toneNote function, outerId = ' + outerId);
@@ -376,6 +742,7 @@ Process.prototype.toneNote = function(note, time) {
 
 };
 
+/* DEPRECATED */
 Process.prototype.toneSleep = function(time) {
   var outerId = this.context.outerContext.expression.id;
   console.log('in Process.toneSleep function, outerId = ' + outerId);
@@ -397,4 +764,14 @@ Process.prototype.toneSynthProps = function(propType, propValue) {
       }
     }
   }
+}
+
+Process.prototype.musicSample = function(samplename) {
+
+  var aSample = loadSample(samplename);
+
+  var event = new MusicEvent('SAMPLE', null, samplename, aSample.buffer.duration);
+
+  musicPart.add(event); // the MusicPart will figure out the correct time to invoke the note event
+  console.log('added sample event: ', event);
 }

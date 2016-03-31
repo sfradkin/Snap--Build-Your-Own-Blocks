@@ -69,4 +69,41 @@
     };
   }(ThreadManager.prototype.removeTerminatedProcesses));
 
+  Process.prototype.evaluateContext = (function(oldEvaluateContext) {
+    return function() {
+      var exp = this.context.expression;
+      var hasMusic = false;
+
+      if (exp instanceof Array) {
+        if ((!this.homeContext.expression || !this.homeContext.expression.curPartId) && (this.topBlock.selector === 'receiveGo' || this.topBlock === exp[0]) && this.context.pc === 0) {
+          // go through each block to see if we find one of the music blocks
+          if (exp.some(function(block) {
+            return findSnapMusicBlock(block);
+          })) {
+            // if == true
+            var partId = initMusicPart();
+            // put the partId into the home context
+            this.homeContext.expression = {curPartId: partId};
+            // add a fake block to the end of the array
+            exp.push('musicEnd');
+          } else {
+            /// if == false
+            // do nothing
+          }
+        }
+      } else if (exp === 'musicEnd') {
+        musicEnd(this.homeContext.expression.curPartId);
+        this.popContext();
+      } else if (exp === 'loopEnd') {
+        loopEnd(this.homeContext.expression.curPartId);
+        this.popContext();
+      }
+
+      if (exp !== 'musicEnd' && exp !== 'loopEnd') {
+        return oldEvaluateContext.call(this);
+      }
+
+    };
+  }(Process.prototype.evaluateContext));
+
 }());

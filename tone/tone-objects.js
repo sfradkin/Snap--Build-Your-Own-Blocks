@@ -10,50 +10,63 @@
 
   SpriteMorph.prototype.blockColor['music'] = new Color(212, 98, 255);
 
-  //SpriteMorph.prototype.initBlocks = (function(oldInitBlocks) {
-    var initMusicBlocks = function() {
-      //oldInitBlocks.call(this);
+  var initMusicBlocks = function() {
 
-      SpriteMorph.prototype.blocks.toneSimpleSynth =
-      {
-        type: 'toneblock',
-        category: 'music',
-        spec: 'use synth %toneSynths %c'
-      };
-
-      SpriteMorph.prototype.blocks.toneSynthProps =
-      {
-        type: 'toneblock',
-        category: 'music',
-        spec: 'set synth property %toneSP to %s'
-      };
-
-      SpriteMorph.prototype.blocks.toneFx =
-      {
-        type: 'toneblock',
-        category: 'music',
-        spec: 'add fx %tonefx for %c'
-      };
-
-      SpriteMorph.prototype.blocks.toneNote =
-      {
-        only: SpriteMorph,
-        type: 'command',
-        category: 'music',
-        spec: 'oscillate note %s for time %s',
-        defaults: ['c3', '4n']
-      };
-
-      SpriteMorph.prototype.blocks.toneSleep =
-      {
-        only: SpriteMorph,
-        type: 'command',
-        category: 'music',
-        spec: 'silence for time %s',
-        defaults: ['4n']
-      };
+    SpriteMorph.prototype.blocks.musicPlay =
+    {
+      only: SpriteMorph,
+      type: 'command',
+      category: 'music',
+      spec: 'play note %s for time %s',
+      defaults: ['c3', '4n']
     };
-  //}(SpriteMorph.prototype.initBlocks));
+
+    SpriteMorph.prototype.blocks.musicRest =
+    {
+      only: SpriteMorph,
+      type: 'command',
+      category: 'music',
+      spec: 'silence for time %s',
+      defaults: ['4n']
+    };
+
+    SpriteMorph.prototype.blocks.liveLoop =
+    {
+      only: SpriteMorph,
+      type: 'command',
+      category: 'music',
+      spec: 'live loop %c'
+    };
+
+    SpriteMorph.prototype.blocks.toneSimpleSynth =
+    {
+      type: 'toneblock',
+      category: 'music',
+      spec: 'use synth %toneSynths %c'
+    };
+
+    SpriteMorph.prototype.blocks.toneSynthProps =
+    {
+      type: 'toneblock',
+      category: 'music',
+      spec: 'set synth property %toneSP to %s'
+    };
+
+    SpriteMorph.prototype.blocks.toneFx =
+    {
+      type: 'toneblock',
+      category: 'music',
+      spec: 'add fx %tonefx for %c'
+    };
+
+    SpriteMorph.prototype.blocks.musicSample =
+    {
+      type: 'command',
+      category: 'music',
+      spec: 'play sample %toneSamples'
+    };
+  };
+
   initMusicBlocks();
 
   SpriteMorph.prototype.blockForSelector = (function(oldBlockForSelector) {
@@ -110,11 +123,13 @@
       var blocks = oldBlockTemplates.call(this, category);
 
       if (category === 'music') {
-        blocks.push(block(this, 'toneSimpleSynth'));
-        blocks.push(block(this, 'toneSynthProps'));
-        blocks.push(block(this, 'toneFx'));
-        blocks.push(block(this, 'toneNote'));
-        blocks.push(block(this, 'toneSleep'));
+        blocks.push(block(this, 'musicPlay'));
+        blocks.push(block(this, 'musicRest'));
+        blocks.push(block(this, 'liveLoop'));
+        //blocks.push(block(this, 'toneSimpleSynth'));
+        //blocks.push(block(this, 'toneSynthProps'));
+        //blocks.push(block(this, 'toneFx'));
+        blocks.push(block(this, 'musicSample'));
       }
 
       return blocks;
@@ -124,6 +139,8 @@
   StageMorph.prototype.fireGreenFlagEvent = (function(oldFireGreenFlagEvent) {
     return function() {
       var procs = oldFireGreenFlagEvent.call(this);
+
+      cleanUpParts();
 
       var hats = [],
       myself = this,
