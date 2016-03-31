@@ -5,6 +5,12 @@ var musicParts = {};
 var samples = {};
 var toClean = [];
 
+var preloadSamples = function() {
+  var aSample = new Tone.Player('tone/samples/bd.wav');
+  aSample.toMaster();
+  samples['bd'] = aSample;
+};
+
 var sweepClean = function() {
   for (var i = 0; i < toClean.length; i ++) {
     var part = musicParts[toClean[i]];
@@ -19,6 +25,8 @@ var sweepClean = function() {
 Tone.Transport.scheduleRepeat(sweepClean, 5, 0);
 
 var snapMusicBlocks = ['musicPlay', 'musicRest', 'liveLoop'];
+
+preloadSamples();
 
 var cleanUpParts = function() {
   Object.keys(musicParts).every(function(key) {
@@ -136,6 +144,7 @@ var playEvents = function(time, event) {
   } else if (event.type === 'SAMPLE') {
     var aSample = loadSample(event.play);
     aSample.start();
+    console.log('attempting to start sample: ', event.play);
   }
 
 };
@@ -769,6 +778,43 @@ Process.prototype.toneSynthProps = function(propType, propValue) {
 Process.prototype.musicSample = function(samplename) {
 
   var aSample = loadSample(samplename);
+
+  var outerId;
+  if (this.context.outerContext.expression) {
+    outerId = this.context.outerContext.expression.id;
+  }
+
+  var musicPart;
+
+  // if outer id is null, then we're not within a synth or fx c-block
+  if (!outerId) {
+
+      if (this.homeContext.expression) {
+        musicPart = musicParts[this.homeContext.expression.curPartId];
+      }
+    // since we didn't have an outer id which indicates either a synth or fx this is within,
+    // grab the id of the default synth to use as the synth to sound the note
+    outerId = defaultSynth.id;
+
+  } else {
+    // there's an outer id which means that this block is within a synth c-block or an fx c-block
+    // if we're in a synth c-block, then the outer id should go with the note
+    // if we're in an fx c-block, things get more complex
+    // solve the fx issue later, but we probably need to clone the default synth and run it through the
+    // fx node, then store the synth id somewhere so music play blocks further down the line have the correct
+    // synth id
+
+    if (this.context.outerContext.expression.type === 'fx') {
+      // don't do anything now
+    }
+
+
+      if (this.homeContext.expression) {
+        musicPart = musicParts[this.homeContext.expression.curPartId];
+      }
+
+
+  }
 
   var event = new MusicEvent('SAMPLE', null, samplename, aSample.buffer.duration);
 
