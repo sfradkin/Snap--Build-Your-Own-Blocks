@@ -9,6 +9,18 @@ var preloadSamples = function() {
   var aSample = new Tone.Player('tone/samples/bd.wav');
   aSample.toMaster();
   samples['bd'] = aSample;
+
+  aSample = new Tone.Player('tone/samples/sn.wav');
+  aSample.toMaster();
+  samples['sn'] = aSample;
+
+  aSample = new Tone.Player('tone/samples/ch.wav');
+  aSample.toMaster();
+  samples['ch'] = aSample;
+
+  aSample = new Tone.Player('tone/samples/oh.wav');
+  aSample.toMaster();
+  samples['oh'] = aSample;
 };
 
 var sweepClean = function() {

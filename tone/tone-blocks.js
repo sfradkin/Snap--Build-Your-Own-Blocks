@@ -64,7 +64,10 @@
           part = new InputSlotMorph(
               null,
               false,
-              {   'bass drum' : 'bd'
+              {   'bass drum' : 'bd',
+                  'snare' : 'sn',
+                  'closed hi hat' : 'ch',
+                  'open hi hat' : 'oh'
               },
               true
           );
