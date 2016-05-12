@@ -156,6 +156,9 @@ var playEvents = function(time, event) {
   } else if (event.type === 'SAMPLE') {
     var aSample = loadSample(event.play);
     aSample.start();
+    if (event.duration > 0.25) {
+      aSample.stop('+0.25');
+    }
     console.log('attempting to start sample: ', event.play);
   }
 
