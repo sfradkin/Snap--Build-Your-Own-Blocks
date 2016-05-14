@@ -73,7 +73,7 @@
     return function() {
       var exp = this.context.expression;
       var hasMusic = false;
-
+      console.log('evaluateContext: evaluating exp: ', exp);
       if (exp instanceof Array) {
         if ((!this.homeContext.expression || !this.homeContext.expression.curPartId) && (this.topBlock.selector === 'receiveGo' || this.topBlock === exp[0]) && this.context.pc === 0) {
           // go through each block to see if we find one of the music blocks

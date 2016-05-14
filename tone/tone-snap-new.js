@@ -87,6 +87,7 @@ var musicEnd = function(partId) {
 
 var loopEnd = function(partId) {
   musicPart = musicParts[partId];
+  console.log('setting loop end for part:', musicPart);
   musicPart.loopEnd();
 };
 
@@ -153,6 +154,7 @@ var playEvents = function(time, event) {
   if (event.type === 'NOTE') {
     var synth = toneMap[event.outputId];
     synth.synth.triggerAttackRelease(event.play, event.duration);
+    console.log('playing note: ', event.play, ', ', event.duration);
   } else if (event.type === 'SAMPLE') {
     var aSample = loadSample(event.play);
     aSample.start();
@@ -160,6 +162,8 @@ var playEvents = function(time, event) {
       aSample.stop('+0.25');
     }
     console.log('attempting to start sample: ', event.play);
+  } else {
+    console.log('inserting silence: ', event.duration);
   }
 
 };
@@ -192,62 +196,6 @@ var isTransportRunning = function() {
 var synthSettings = {
   monosynth: 'set detune to %s %br set oscillator type to %toneOscType',
   fmsynth: 'set modulation index to %s'
-};
-
-/* DEPRECATED */
-var scheduleNote = function(id, noteObj, store) {
-  var existingSynth = toneMap[id];
-
-  if (existingSynth) {
-    // convert note length into seconds
-    noteObj.seconds = Tone.Transport.toSeconds(noteObj.time);
-
-    console.log('scheduling note: ', noteObj.note, ' for length: ', noteObj.time, ' which is: ', noteObj.seconds, 's and at virtual time: ', existingSynth.curVirtTime);
-    console.log('schedule note at transport tick: ', (existingSynth.transportTimeStart + existingSynth.offSetTicks));
-
-
-    var noteEventId = Tone.Transport.scheduleOnce(function(time) {
-      console.log('event id: ', noteEventId, ' playing note: ', noteObj.note, ' for length: ', noteObj.time, ' at transport tick time: ', Tone.Transport.ticks);
-      if (noteObj.note !== 'sleep') {
-        existingSynth.synth.triggerAttackRelease(noteObj.note, noteObj.time);
-      }
-      var eventIdx = existingSynth.noteEvents.indexOf(noteEventId);
-      existingSynth.noteEvents.slice(eventIdx, 1);
-    }, (existingSynth.transportTimeStart + existingSynth.offSetTicks) + 'i');
-
-    existingSynth.noteEvents.push(noteEventId);
-
-    // update the virtual time of the synth
-    existingSynth.curVirtTime = existingSynth.curVirtTime + noteObj.seconds;
-
-    existingSynth.offSet += existingSynth.synth.toSeconds(noteObj.time);
-    existingSynth.offSetTicks = Tone.Transport.toTicks(existingSynth.offSet);
-    console.log('offset time in seconds: ', existingSynth.offSet, ' offset time in ticks: ', existingSynth.offSetTicks);
-
-    if (store) {
-      existingSynth.notes.push(noteObj);
-      existingSynth.loopTime = existingSynth.loopTime + noteObj.seconds;
-    }
-  }
-};
-
-/* DEPRECATED */
-var createAndPlaySynth = function(synthid) {
-
-  console.log('at end of synth block: ', synthid);
-
-  // kick off "recorded mode playback"
-  var keys = Object.keys(toneMap);
-
-  keys.forEach(function(key) {
-    synthObj = toneMap[key];
-    if (!synthObj.scheduled) {
-      synthObj.totalLoopOffset = synthObj.offSet;
-    }
-  });
-
-  doToneRecordedMode();
-
 };
 
 /* WILL NEED TO ADD IN DESTROYING THE PARTS */
@@ -295,24 +243,6 @@ var stopTone = function() {
   Tone.Transport.cancel();
 };
 
-/* DEPRECATED */
-var doToneRecordedMode = function() {
-  var synthObj, notes;
-
-  var keys = Object.keys(toneMap);
-
-    keys.forEach(function(key) {
-
-      synthObj = toneMap[key];
-      if (synthObj.scheduled) {
-        console.log('synth: ', synthObj.id, ' already scheduled');
-      } else {
-        console.log('time now: ', Tone.Transport.now(), ', schedule periodic callback 1 for synth id: ', synthObj.id, ' every ', (synthObj.loopTime - 0.05));
-        synthObj.scheduled = Tone.Transport.scheduleRepeat(synthObj.synthScheduleCallback, (synthObj.loopTime - 0.05));
-      }
-    });
-};
-
 MusicPart.prototype = new Object();
 function MusicPart(id) {
   this.id = id;
@@ -322,6 +252,9 @@ function MusicPart(id) {
   /* calculate the correct offset for when to invoke this event
      and add to the Tone.Part */
   this.add = function(event) {
+
+    console.log('current Part offset: ', this.offset);
+
     if (event.type === 'NOTE') {
       // this note should be scheduled to start at the end of the duration of
       // the previously scheduled event
@@ -350,6 +283,8 @@ function MusicPart(id) {
       // recalc the offset
       this.offset += this.tonePart.toTicks(event.duration);
     }
+
+    console.log('recalculated Part offset: ', this.offset);
   };
 
   this.start = function(time) {
@@ -363,11 +298,12 @@ function MusicPart(id) {
 
   this.loop = function() {
     this.tonePart.loop = true;
-    this.tonePart.loopStart = 0;
+    this.tonePart.loopStart = 0 + 'i';
   };
 
   this.loopEnd = function() {
-    this.tonePart.loopEnd = this.offset;
+    console.log('loop end set to offset: ', this.offset);
+    this.tonePart.loopEnd = this.offset + 'i';
   };
 
 };
@@ -385,30 +321,9 @@ function ToneSynth(id, synth) {
   this.id = id;
   this.synth = synth;
 
-  /* deprecate begin */
-  this.notes = [];
-  this.offSet = 0;
-  this.transportTimeStart = 0;  // The transport time this synth was started at
-  this.curVirtTime = 0;  // The current virtual time of this synth
-  this.loopTime = 0;  // The time it takes to make a loop of the notes defined in this synth
-  this.offSetTicks = 0;
-  this.noteEvents = [];
-  /* deprecate end */
-
   this.type = '';
 
   var thisSynth = this;
-
-  /* DEPRECATED */
-  this.synthScheduleCallback = function(time) {
-
-    console.log('--------- synthScheduleCallback fired at ', Tone.Transport.now());
-
-    console.log('scheduling notes for synth: ', thisSynth.id);
-    thisSynth.notes.forEach(function(noteObj) {
-        scheduleNote(thisSynth.id, noteObj, false);
-    });
-  };
 };
 
 ToneFx.prototype = new Object();
@@ -645,11 +560,19 @@ Process.prototype.liveLoop = function(body) {
   musicPart.loop();
 
   this.popContext();
+
+  // console.log('pushing loopEnd');
+  // this.pushContext('loopEnd');
+
       if (body) {
-          this.pushContext(body.blockSequence(), this.context.outerContext);
+          blockSeq = body.blockSequence();
+          blockSeq.push('loopEnd');
+          this.pushContext(blockSeq, this.context.outerContext);
       }
-  //this.pushContext();
-  this.pushContext('loopEnd');
+  this.pushContext();
+  //console.log('pushing loopEnd');
+  //this.pushContext('loopEnd');
+  //this.context.expression.push('loopEnd');
 };
 
 Process.prototype.musicPlay = function(note, duration) {
@@ -752,27 +675,6 @@ Process.prototype.musicRest = function(duration) {
 
   musicPart.add(event); // the MusicPart will figure out the correct time to invoke the note event
   console.log('added rest event: ', event);
-
-};
-
-
-/* DEPRECATED */
-Process.prototype.toneNote = function(note, time) {
-  var outerId = this.context.outerContext.expression.id;
-  console.log('in Process.toneNote function, outerId = ' + outerId);
-
-  scheduleNote(outerId, {note: note, time: time}, true);  // when processing the actual note block we send a boolean true to store for later
-  return null;
-
-};
-
-/* DEPRECATED */
-Process.prototype.toneSleep = function(time) {
-  var outerId = this.context.outerContext.expression.id;
-  console.log('in Process.toneSleep function, outerId = ' + outerId);
-
-  scheduleNote(outerId, {note: 'sleep', time: time}, true);  // when processing the actual note block we send a boolean true to store for later
-  return null;
 
 };
 
