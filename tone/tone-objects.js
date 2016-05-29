@@ -65,6 +65,14 @@
       category: 'music',
       spec: 'play sample %toneSamples'
     };
+
+    SpriteMorph.prototype.blocks.musicTempo =
+    {
+      type: 'command',
+      category: 'music',
+      spec: 'set tempo to %n bpm',
+      defaults: [120]
+    }
   };
 
   initMusicBlocks();
@@ -130,6 +138,7 @@
         //blocks.push(block(this, 'toneSynthProps'));
         //blocks.push(block(this, 'toneFx'));
         blocks.push(block(this, 'musicSample'));
+        blocks.push(block(this, 'musicTempo'));
       }
 
       return blocks;

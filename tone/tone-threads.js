@@ -30,18 +30,42 @@
       // if it's not started, then start it up
       // if it's already started, then don't do anything
       console.log('block is: ', block);
-      if (block.children.length > 0) {
-        hasToneChild = block.children.some(function(child) {
-          if (child.selector === 'toneSimpleSynth') {
-            return true;
-          }
-        });
+      if (findSnapMusicBlock(block)) {
+        hasToneChild = true;
+      } else {
+        hasToneChild = false;
       }
+
+      console.log('hasToneChild: ', hasToneChild);
+
+      // if (block.children.length > 0) {
+      //   hasToneChild = block.children.some(function(child) {
+      //     if (child.selector === 'toneSimpleSynth') {
+      //       return true;
+      //     }
+      //   });
+      // }
 
       block.hasToneChild = hasToneChild;
 
       if ((block.isTone && block.isTone()) || hasToneChild) {
         if (Tone.Transport.state === 'stopped') {
+          // add some initialization
+          console.log('scheduling sweep clean');
+          Tone.Transport.scheduleRepeat(sweepClean, 5, 0);
+          console.log('samples: ', samples);
+          if (!samples || samples.length === 0) {
+            console.log('preloading samples');
+            preloadSamples();
+          }
+          console.log('default synth: ', defaultSynth);
+          if (!defaultSynth) {
+            console.log('generating default synth');
+            defaultSynth = generateDefaultSynth();
+          } else {
+            defaultSynth = null;
+            defaultSynth = generateDefaultSynth();
+          }
           console.log('starting transport');
           Tone.Transport.start();
         }

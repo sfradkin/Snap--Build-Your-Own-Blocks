@@ -87,6 +87,8 @@ var musicEnd = function(partId) {
 
 var loopEnd = function(partId) {
   musicPart = musicParts[partId];
+  console.log('calculating offsets and scheduling events:', musicPart);
+  musicPart.calculateTimes();
   console.log('setting loop end for part:', musicPart);
   musicPart.loopEnd();
 };
@@ -154,16 +156,16 @@ var playEvents = function(time, event) {
   if (event.type === 'NOTE') {
     var synth = toneMap[event.outputId];
     synth.synth.triggerAttackRelease(event.play, event.duration);
-    console.log('playing note: ', event.play, ', ', event.duration);
+    console.log('playing note at time ', time, ': ', event.play, ', ', event.duration, ', part: ', event.partNum);
   } else if (event.type === 'SAMPLE') {
     var aSample = loadSample(event.play);
     aSample.start();
     if (event.duration > 0.25) {
       aSample.stop('+0.25');
     }
-    console.log('attempting to start sample: ', event.play);
+    console.log('attempting to start sample at time ', time, ': ', event.play, ', part: ', event.partNum);
   } else {
-    console.log('inserting silence: ', event.duration);
+    console.log('inserting silence at time ', time, ': ', event.duration, ', part: ', event.partNum);
   }
 
 };
@@ -247,41 +249,88 @@ MusicPart.prototype = new Object();
 function MusicPart(id) {
   this.id = id;
   this.offset = 0;
+  this.events = [];
   this.tonePart = new Tone.Part(playEvents);
+
+  this.add = function(event) {
+    this.events.push(event);
+  };
+
+  this.calculateTimes = function() {
+    // grab the currently defined tempo from the Transport
+    // defaults to 120bpm
+    var curTempo = Tone.Transport.bpm.value;
+
+    // 1 cycle is 1 beat
+    // so at 60bpm 1 cycle is 1 second
+    // and at 120bpm 1 cycle is 0.5 second
+
+    var timeForOneCycle = 60.0/curTempo;
+    console.log('time for one cycle: ', timeForOneCycle, 's');
+
+    // convert cycle time into ticks
+    var timeForOneCycleInTicks = this.tonePart.toTicks(timeForOneCycle);
+    console.log('time for one cycle in ticks: ', timeForOneCycleInTicks, 'i');
+
+    // for now there is no grouping of event blocks, so count how many
+    // events there are
+    var numEvents = this.events.length;
+    console.log('there are ', numEvents, ' events');
+
+    // divide the cycle time in ticks by the number of events
+    // need to round to the nearest integer number of ticks as ticks must
+    // be a whole number
+    var ticksPerEvent = Math.round(timeForOneCycleInTicks/numEvents);
+    console.log('each event is ', ticksPerEvent, ' ticks apart');
+
+    // iterate through the events and call addEventToPart to schedule the
+    // events to the Part
+    // be sure to set the final offset to the cycle time in ticks
+
+    var that = this;
+    this.events.forEach(function(event) {
+      event.timeToNextOffset = ticksPerEvent;
+      event.duration = 0.1;
+      that.addEventToPart(event);
+    });
+
+  };
 
   /* calculate the correct offset for when to invoke this event
      and add to the Tone.Part */
-  this.add = function(event) {
+  this.addEventToPart = function(event) {
+
+    // NOTE
+    // this note should be scheduled to start at the end of the duration of
+    // the previously scheduled event
+
+    // REST
+    // a rest does not trigger any sounds, but it _does_ update the calculated
+    // offset so that the next event can be scheduled correctly
+
+    // SAMPLE
+    // samples are played through Tone.Player
+    // the duration of a sample can be retrieved via Tone.Player.buffer.duration
 
     console.log('current Part offset: ', this.offset);
+    // currently, all event types are treated the same, so removing the
+    // if/else on event types
 
-    if (event.type === 'NOTE') {
-      // this note should be scheduled to start at the end of the duration of
-      // the previously scheduled event
+    this.tonePart.add(this.offset + 'i', event);
 
-      this.tonePart.add(this.offset + 'i', event);
+    // recalc the offset
+    // if the event contains a value other than 0 in event.timeToNextOffset
+    // then use that instead of the duration
+    // this allows us to schedule events at times other than the end of the duration
+    // of a note
 
-      // recalc the offset
+    if (event.timeToNextOffset > 0) {
+      // time to next offset is already in ticks
+      this.offset += event.timeToNextOffset;
+      console.log('using timeToNextOffset: ', event.timeToNextOffset);
+    } else {
       this.offset += this.tonePart.toTicks(event.duration);
-
-
-    } else if (event.type === 'REST') {
-      // a rest does not trigger any sounds, but it _does_ update the calculated
-      // offset so that the next event can be scheduled correctly
-
-      this.tonePart.add(this.offset + 'i', event);
-
-      // recalc the offset
-      this.offset += this.tonePart.toTicks(event.duration);
-
-    } else if (event.type === 'SAMPLE') {
-      // samples are played through Tone.Player
-      // the duration of a sample can be retrieved via Tone.Player.buffer.duration
-
-      this.tonePart.add(this.offset + 'i', event);
-
-      // recalc the offset
-      this.offset += this.tonePart.toTicks(event.duration);
+      console.log('using event duration: ', event.duration);
     }
 
     console.log('recalculated Part offset: ', this.offset);
@@ -293,7 +342,9 @@ function MusicPart(id) {
   };
 
   this.stop = function() {
-    this.tonePart.stop(this.offset);
+    this.tonePart.stop(this.offset + 'i');
+    // clean out the events from the Part
+    this.events = [];
   };
 
   this.loop = function() {
@@ -309,11 +360,13 @@ function MusicPart(id) {
 };
 
 MusicEvent.prototype = new Object();
-function MusicEvent(type, outputId, play, duration) {
+function MusicEvent(type, outputId, play, duration, partNum) {
   this.type = type;
   this.outputId = outputId;
   this.play = play;
   this.duration = duration;
+  this.timeToNextOffset = 0;
+  this.partNum = partNum;
 };
 
 ToneSynth.prototype = new Object();
@@ -620,7 +673,7 @@ Process.prototype.musicPlay = function(note, duration) {
 
   }
 
-  var event = new MusicEvent('NOTE', outerId, note, duration);
+  var event = new MusicEvent('NOTE', outerId, note, duration, this.homeContext.expression.curPartId);
 
   musicPart.add(event); // the MusicPart will figure out the correct time to invoke the note event
   console.log('added note event: ', event);
@@ -671,7 +724,7 @@ Process.prototype.musicRest = function(duration) {
 
   }
 
-  var event = new MusicEvent('REST', outerId, null, duration);
+  var event = new MusicEvent('REST', outerId, null, duration, this.homeContext.expression.curPartId);
 
   musicPart.add(event); // the MusicPart will figure out the correct time to invoke the note event
   console.log('added rest event: ', event);
@@ -733,8 +786,16 @@ Process.prototype.musicSample = function(samplename) {
 
   }
 
-  var event = new MusicEvent('SAMPLE', null, samplename, aSample.buffer.duration);
+  var event = new MusicEvent('SAMPLE', null, samplename, aSample.buffer.duration, this.homeContext.expression.curPartId);
 
   musicPart.add(event); // the MusicPart will figure out the correct time to invoke the note event
   console.log('added sample event: ', event);
+}
+
+Process.prototype.musicTempo = function(tempo) {
+  // for (var idx in musicParts) {
+  //   musicParts[idx].tonePart.playbackRate = tempo/60.0;
+  // }
+
+  Tone.Transport.bpm.value = tempo;
 }
