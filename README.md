@@ -5,7 +5,9 @@ much more sophisticated sound.
 
 08-06-2016
 
-Merge of 0.3 branch into master
+Create version 0.4.
+
+This version will begin adding visual interfaces for blocks.
 
 See http://www.fradkin.com/snap-music.html for more details.
 
