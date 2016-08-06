@@ -70,8 +70,7 @@
     {
       type: 'command',
       category: 'music',
-      spec: 'set tempo to %n bpm',
-      defaults: [120]
+      spec: '%metronomeicon %turtleicon %tempoSlider %rabbiticon'
     }
   };
 
